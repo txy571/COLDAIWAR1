@@ -1,1 +1,26 @@
+# dependencies
 node_modules
+/.pnpm-store
+
+# Next.js build outputs
+.next/
+out/
+build/
+
+# IDE / Agent caches
+.claude/
+.superpowers/
+.gemini/
+.idea/
+.vscode/
+*.tsbuildinfo
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# local env files
+.env*.local
+.env
