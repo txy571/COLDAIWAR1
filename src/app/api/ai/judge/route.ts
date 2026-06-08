@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
-    const side = activePlayerSide || 'usa'
+    const side: 'usa' | 'ussr' = activePlayerSide === 'ussr' ? 'ussr' : 'usa'
     const playerState = side === 'usa' ? gameState?.players?.usa : gameState?.players?.ussr
     const penetration = playerState?.intel?.ussrPenetration ?? 50
 

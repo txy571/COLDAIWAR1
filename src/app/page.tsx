@@ -672,7 +672,7 @@ export default function Home() {
               onlineTimer={onlineTimer}
               mpMessages={mpMessages}
               mpRole={faction}
-              onJoinRoom={(rid, sd) => handleLobbyGameStart(rid, sd, (window as any).mpManager)}
+              onJoinRoom={(rid, sd) => handleLobbyGameStart(rid, sd as 'usa' | 'ussr', (window as any).mpManager)}
               onLeaveRoom={handleLeaveRoom}
               onSendChat={handleSendChat}
             />

@@ -32,7 +32,7 @@ export function VictoryScreen({ result, store, onRestart }: VictoryScreenProps) 
     if (apiKey) {
       setLoading(true)
       const timelineSummary = store.timeline
-        .filter(e => e.type === 'CRISIS' || e.type === 'WAR' || e.type === 'MILITARY' || e.type === 'DIPLOMACY')
+        .filter(e => e.type === 'CRISIS' || e.type === 'MILITARY' || e.type === 'DIPLOMACY')
         .map(e => `[${e.year}年] ${e.title}`)
         .join(' ──> ')
 

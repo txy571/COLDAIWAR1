@@ -41,10 +41,22 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
       case 'INIT':
         if (ev.side === 'usa' || ev.side === 'ussr') setMySide(ev.side)
         setPhase('waiting')
-        addLog(`[系统] 已连接至服务器，房间: ${ev.side === 'usa' ? '等待苏方加入...' : '等待美方加入...'}`)
         if (ev.gameState) {
           useGameStore.getState().loadGameState(ev.gameState)
           addLog(`[系统] 已从服务器同步房间历史局势数据！`)
+        }
+        // If room is already full when we join, start immediately
+        if (ev.activePlayers && ev.activePlayers.length >= 2) {
+          addLog(`[系统] 已连接至房间，对手已就位！`)
+          addLog('[系统] ⚡ 进入游戏！')
+          const opponentSide = ev.side === 'usa' ? 'ussr' : 'usa'
+          setTimeout(() => {
+            if (managerRef.current) {
+              onGameStart(roomId, ev.side as 'usa' | 'ussr', managerRef.current)
+            }
+          }, 1000)
+        } else {
+          addLog(`[系统] 已连接至服务器，房间: ${ev.side === 'usa' ? '等待苏方加入...' : '等待美方加入...'}`)
         }
         break
       case 'PLAYER_JOINED':

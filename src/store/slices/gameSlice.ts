@@ -81,7 +81,7 @@ export const createGameSlice: StateCreator<GameSlice, [["zustand/immer", never],
     if ((s as any).newspapers) (s as any).newspapers = []
   }),
 
-  loadGameState: (state) => set((s) => {
+  loadGameState: (state) => set((s: any) => {
     if (!state) return
     if (state.currentEra !== undefined) s.currentEra = state.currentEra
     if (state.year !== undefined) s.year = state.year
