@@ -9,6 +9,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { MultiplayerManager, MultiplayerEvent } from '@/lib/multiplayer'
 import { audioManager } from '@/lib/audio'
+import { useGameStore } from '@/store/gameStore'
 
 interface MultiplayerLobbyProps {
   onGameStart: (roomId: string, side: 'usa' | 'ussr', manager: MultiplayerManager) => void
@@ -23,6 +24,7 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   const [mySide, setMySide] = useState<'usa' | 'ussr' | null>(null)
   const [log, setLog] = useState<string[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [useMock, setUseMock] = useState(false)
   const managerRef = useRef<MultiplayerManager | null>(null)
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg])
@@ -40,6 +42,10 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
         if (ev.side === 'usa' || ev.side === 'ussr') setMySide(ev.side)
         setPhase('waiting')
         addLog(`[系统] 已连接至服务器，房间: ${ev.side === 'usa' ? '等待苏方加入...' : '等待美方加入...'}`)
+        if (ev.gameState) {
+          useGameStore.getState().loadGameState(ev.gameState)
+          addLog(`[系统] 已从服务器同步房间历史局势数据！`)
+        }
         break
       case 'PLAYER_JOINED':
         addLog(ev.message)
@@ -96,7 +102,7 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
       id,
       'usa',
       handleLobbyEvent,
-      false,   // useOfflineMock = false → connect to real server
+      useMock,   // useOfflineMock based on user toggle
       true     // noMockFallback = true → don't silently fallback
     )
     managerRef.current = mgr
@@ -116,7 +122,7 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
       id,
       'ussr',
       handleLobbyEvent,
-      false,   // connect to real server
+      useMock,   // useOfflineMock based on user toggle
       true     // no fallback
     )
     managerRef.current = mgr
@@ -144,6 +150,29 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
         <div className="p-6 sm:p-8">
           {phase === 'home' && (
             <div className="space-y-5">
+              {/* Online/Mock Selector Toggle */}
+              <div className="flex items-center justify-between p-2.5 bg-stone-100 border border-stone-300 rounded-sm">
+                <span className="text-[10px] font-bold text-stone-600 font-mono">联机连接模式:</span>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => { setUseMock(false); audioManager.playClick(); }}
+                    className={`px-2.5 py-1 text-[9px] font-bold rounded-sm border font-mono transition-all ${
+                      !useMock ? 'bg-stone-700 text-stone-50 border-stone-700 shadow-sm' : 'bg-stone-50 text-stone-500 border-stone-300 hover:bg-stone-100'
+                    }`}
+                  >
+                    在线联机
+                  </button>
+                  <button
+                    onClick={() => { setUseMock(true); audioManager.playClick(); }}
+                    className={`px-2.5 py-1 text-[9px] font-bold rounded-sm border font-mono transition-all ${
+                      useMock ? 'bg-stone-700 text-stone-50 border-stone-700 shadow-sm' : 'bg-stone-50 text-stone-500 border-stone-300 hover:bg-stone-100'
+                    }`}
+                  >
+                    本地 Mock
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={handleCreateRoom}
                 className="w-full py-3.5 bg-stone-700 hover:bg-stone-800 text-stone-100 font-bold tracking-wider text-sm rounded-sm transition-all active:scale-[0.98]"

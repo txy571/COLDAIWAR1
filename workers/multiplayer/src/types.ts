@@ -6,6 +6,7 @@ export interface InitPayload {
   side: 'usa' | 'ussr' | 'observer'
   gameState: any
   timer: number
+  activePlayers?: string[]
 }
 
 export interface ChatPayload {

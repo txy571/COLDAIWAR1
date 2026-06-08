@@ -10,6 +10,8 @@ export class GameRoom {
   private state: DurableObjectState
   private ctx: DurableObjectState
   private clients: WsClient[] = []
+  private loaded = false
+  private gameState: any = null
   private room: RoomState = {
     players: new Map(),
     timerSeconds: TIMER_DURATION,
@@ -38,6 +40,16 @@ export class GameRoom {
       return new Response('Expected WebSocket upgrade', { status: 426 })
     }
 
+    // Load game state from storage if not loaded
+    if (!this.loaded) {
+      try {
+        this.gameState = await this.state.storage.get("gameState") || null
+      } catch (err) {
+        console.error("Failed to load game state:", err)
+      }
+      this.loaded = true
+    }
+
     const pair = new WebSocketPair()
     const [server, client] = Object.values(pair)
 
@@ -52,20 +64,27 @@ export class GameRoom {
       this.room.players.set(side, { side, ready: true })
     }
 
-    // Send INIT to the new client
+    // Send INIT to the new client (with current state and players list)
     this.sendTo(server, {
       type: 'INIT',
       side,
-      gameState: null,
+      gameState: this.gameState,
       timer: this.room.timerSeconds,
+      activePlayers: Array.from(this.room.players.keys()),
+    })
+
+    // Notify others that active players changed
+    this.broadcast({
+      type: 'PLAYERS_CHANGED',
+      activePlayers: Array.from(this.room.players.keys()),
     })
 
     // Notify others that a player joined
     this.broadcast(
       {
-        type: 'PLAYER_JOINED',
-        side,
-        message: `[系统] ${side.toUpperCase()} 已加入房间`,
+         type: 'PLAYER_JOINED',
+         side,
+         message: `[系统] ${side.toUpperCase()} 已加入房间`,
       },
       clientId
     )
@@ -91,6 +110,12 @@ export class GameRoom {
         type: 'PLAYER_LEFT',
         side,
         message: `[系统] ${side.toUpperCase()} 已离开房间`,
+      })
+
+      // Notify others that active players list changed
+      this.broadcast({
+        type: 'PLAYERS_CHANGED',
+        activePlayers: Array.from(this.room.players.keys()),
       })
 
       // Stop timer if no players remain
@@ -132,6 +157,10 @@ export class GameRoom {
         break
 
       case 'GAME_STATE_UPDATE':
+        this.gameState = msg.gameState
+        this.state.storage.put("gameState", msg.gameState).catch(err => {
+          console.error("Failed to save game state to storage:", err)
+        })
         this.broadcast({
           type: 'GAME_STATE_SYNC',
           gameState: msg.gameState,

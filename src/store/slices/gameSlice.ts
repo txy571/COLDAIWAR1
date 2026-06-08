@@ -22,6 +22,7 @@ export interface GameSlice {
   modifyGlobalTension: (delta: number) => void
   setSelectedCountryId: (id: string | null) => void
   resetGame: () => void
+  loadGameState: (state: any) => void
 }
 
 function getEraForYear(year: number): Era {
@@ -78,5 +79,27 @@ export const createGameSlice: StateCreator<GameSlice, [["zustand/immer", never],
     s.globalTension = 20
     s.selectedCountryId = null
     if ((s as any).newspapers) (s as any).newspapers = []
+  }),
+
+  loadGameState: (state) => set((s) => {
+    if (!state) return
+    if (state.currentEra !== undefined) s.currentEra = state.currentEra
+    if (state.year !== undefined) s.year = state.year
+    if (state.turn !== undefined) s.turn = state.turn
+    if (state.phase !== undefined) s.phase = state.phase
+    if (state.globalTension !== undefined) s.globalTension = state.globalTension
+    if (state.selectedCountryId !== undefined) s.selectedCountryId = state.selectedCountryId
+    if (state.currentActor !== undefined) s.currentActor = state.currentActor
+    if (state.countries !== undefined) s.countries = state.countries
+    if (state.regionalScores !== undefined) s.regionalScores = state.regionalScores
+    if (state.players !== undefined) s.players = state.players
+    if (state.activeSituations !== undefined) s.activeSituations = state.activeSituations
+    if (state.allSituations !== undefined) s.allSituations = state.allSituations
+    if (state.pastSituations !== undefined) s.pastSituations = state.pastSituations
+    if (state.activeBuffs !== undefined) s.activeBuffs = state.activeBuffs
+    if (state.newspapers !== undefined) s.newspapers = state.newspapers
+    if (state.timeline !== undefined) s.timeline = state.timeline
+    if (state.newsFeed !== undefined) s.newsFeed = state.newsFeed
+    if (state.techTrees !== undefined) s.techTrees = state.techTrees
   }),
 })

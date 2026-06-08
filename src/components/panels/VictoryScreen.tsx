@@ -10,6 +10,7 @@ import type { VictoryResult } from '@/engine/victory'
 import { generateEpilogue } from '@/engine/victory'
 import type { GameStore } from '@/store/gameStore'
 import { audioManager } from '@/lib/audio'
+import { BASE_PATH } from '@/config/multiplayer'
 
 
 interface VictoryScreenProps {
@@ -21,10 +22,69 @@ interface VictoryScreenProps {
 export function VictoryScreen({ result, store, onRestart }: VictoryScreenProps) {
   const [epilogue, setEpilogue] = useState('')
   const [showEpilogue, setShowEpilogue] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const text = generateEpilogue(result, store)
-    setEpilogue(text)
+    const localText = generateEpilogue(result, store)
+    const apiKey = localStorage.getItem('ai_judge_api_key') || ''
+    const provider = localStorage.getItem('ai_judge_provider') || 'openai'
+
+    if (apiKey) {
+      setLoading(true)
+      const timelineSummary = store.timeline
+        .filter(e => e.type === 'CRISIS' || e.type === 'WAR' || e.type === 'MILITARY' || e.type === 'DIPLOMACY')
+        .map(e => `[${e.year}年] ${e.title}`)
+        .join(' ──> ')
+
+      const getResearchedTechs = (techList: any[]) => {
+        if (!techList || !Array.isArray(techList)) return []
+        return techList.filter(t => t.researched).map(t => t.id)
+      }
+
+      const winningSide = result.winner || 'usa'
+      const researchedTechIds = getResearchedTechs(store.techTrees?.[winningSide])
+
+      fetch(`${BASE_PATH}/api/ai/epilogue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          winner: result.winner,
+          winnerName: result.winner === 'usa' ? '美利坚合众国' : '苏维埃社会主义共和国联盟',
+          loserName: result.winner === 'usa' ? '苏联' : '美国',
+          victoryType: result.type === 'DOMINATION' ? '支配胜利' :
+                       result.type === 'SPACE' ? '太空竞赛胜利' :
+                       result.type === 'NUCLEAR' ? '核威慑绝对优势' :
+                       result.type === 'IDEOLOGICAL' ? '意识形态渗透' : '经济崩溃碾压',
+          year: result.year,
+          turn: result.turn,
+          score: {
+            usa: store.players.usa.victoryScore,
+            ussr: store.players.ussr.victoryScore,
+          },
+          timelineSummary,
+          researchedTechs: researchedTechIds,
+          apiKey,
+          provider,
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.result) {
+          setEpilogue(`===== 冷战终局 · 历史档案 =====\n\n${data.result}\n\n—— 冷战 AI 历史记录员`)
+        } else {
+          setEpilogue(localText)
+        }
+        setLoading(false)
+      })
+      .catch(err => {
+        console.warn('Failed to fetch AI epilogue:', err)
+        setEpilogue(localText)
+        setLoading(false)
+      })
+    } else {
+      setEpilogue(localText)
+    }
+
     // Auto-show epilogue after a delay
     const timer = setTimeout(() => setShowEpilogue(true), 1500)
     return () => clearTimeout(timer)

@@ -480,10 +480,10 @@ export const INITIAL_TECH_TREE: TechNode[] = [
     effects: [{ target: 'military.nuclearArsenal', modifier: 'add', value: 5 }],
   }),
   node({
-    id: 'containerization', name: '集装箱海运标准', description: '全球海运集装箱化变革，实现物流成本断崖式下降。',
-    era: 'ERA2_SPACE', yearRequirement: 1966, cost: 40,
-    prerequisites: ['assembly_line'], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'INDUSTRY',
-    effects: [{ target: 'economy.gdp', modifier: 'add', value: 12 }],
+    id: 'bullet_train', name: '高速铁路革命', description: '以日本新干线为标志的高速铁路网，极大地缩短了城市群通勤时间。',
+    era: 'ERA2_SPACE', yearRequirement: 1964, cost: 40,
+    prerequisites: ['highway_network'], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'INDUSTRY',
+    effects: [{ target: 'economy.gdp', modifier: 'add', value: 12 }, { target: 'society.stability', modifier: 'add', value: 5 }],
   }),
 
   // --- Era 3: COMPUTER ---
@@ -516,10 +516,10 @@ export const INITIAL_TECH_TREE: TechNode[] = [
 
   // --- Era 5: POST_COLD ---
   node({
-    id: 'jdam', name: 'JDAM精确制导炸弹', description: 'GPS与惯性导航结合的廉价全天候全自动航弹升级包。',
-    era: 'ERA5_POST_COLD', yearRequirement: 1997, cost: 55,
-    prerequisites: ['gps'], exclusiveTo: 'usa', category: 'MILITARY', branch: 'WEAPONS',
-    effects: [{ target: 'military.airforce', modifier: 'add', value: 18 }],
+    id: 'f22_raptor', name: 'F-22隐身战斗机', description: 'F-22猛禽隐身重型战斗机，确保美方对空的绝对空天制空优势。',
+    era: 'ERA5_POST_COLD', yearRequirement: 1997, cost: 70,
+    prerequisites: ['stealth'], exclusiveTo: 'usa', category: 'MILITARY', branch: 'AEROSPACE',
+    effects: [{ target: 'military.airforce', modifier: 'add', value: 20 }],
   }),
   node({
     id: 'glonass', name: '格洛纳斯军用卫星导航', description: '苏联/俄罗斯的全球军用三维定位导弹制导星座网。',

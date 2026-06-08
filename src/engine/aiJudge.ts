@@ -83,6 +83,12 @@ export interface ActionResult {
   countryStatsChanges?: Record<string, Record<string, number>>
   alignmentChanges?: Record<string, Alignment>
   newBuffs?: Buff[]
+  situationChanges?: {
+    id: string
+    action: 'ADVANCE' | 'END' | 'PROGRESS'
+    progressDelta?: number
+    endReason?: string
+  }[]
   newEvent?: {
     id: string
     name: string
@@ -250,28 +256,36 @@ export function applyActionResult(state: GameStore, side: Side, result: ActionRe
 
   const { effects } = result
 
-  // Apply CWS changes
-  for (const [countryId, delta] of Object.entries(effects.cwsChanges)) {
-    state.modifyColdWarScore(countryId, delta)
+  // Safeguard: Clamp values in case LLM outputs out-of-bound changes
+  const budgetChange = Math.max(-10, Math.min(10, effects.budgetChange || 0))
+  const prestigeChange = Math.max(-10, Math.min(10, effects.prestigeChange || 0))
+  const publicSupportChange = Math.max(-10, Math.min(10, effects.publicSupportChange || 0))
+  const victoryScoreChange = effects.victoryScoreChange || 0
+  const globalTensionChange = effects.globalTensionChange || 0
+
+  // Apply CWS changes (clamped at max 15 per rule 7)
+  for (const [countryId, delta] of Object.entries(effects.cwsChanges || {})) {
+    const clampedDelta = Math.max(-15, Math.min(15, delta))
+    state.modifyColdWarScore(countryId, clampedDelta)
   }
 
   // Apply influence shifts
-  for (const shift of effects.influenceShift) {
+  for (const shift of effects.influenceShift || []) {
     state.modifyInfluence(shift.country, shift.side, shift.amount)
   }
 
   // Apply player data changes
-  state.modifyBudget(side, effects.budgetChange)
-  state.modifyPrestige(side, effects.prestigeChange)
-  state.modifyPublicSupport(side, effects.publicSupportChange)
-  if (effects.victoryScoreChange) {
-    state.addVictoryScore(side, effects.victoryScoreChange)
+  state.modifyBudget(side, budgetChange)
+  state.modifyPrestige(side, prestigeChange)
+  state.modifyPublicSupport(side, publicSupportChange)
+  if (victoryScoreChange) {
+    state.addVictoryScore(side, victoryScoreChange)
   }
-  if (effects.globalTensionChange) {
-    state.modifyGlobalTension(effects.globalTensionChange)
+  if (globalTensionChange) {
+    state.modifyGlobalTension(globalTensionChange)
   }
 
-  // Apply direct country stats modifications
+  // Apply direct country stats modifications (clamped to [-15, 15] per rule 12)
   if (result.countryStatsChanges) {
     for (const [countryId, changes] of Object.entries(result.countryStatsChanges)) {
       const country = state.countries[countryId]
@@ -283,32 +297,34 @@ export function applyActionResult(state: GameStore, side: Side, result: ActionRe
 
         for (const [statPath, delta] of Object.entries(changes)) {
           const parts = statPath.split('.')
+          const clampedDelta = Math.max(-15, Math.min(15, delta))
+
           if (parts.length === 2) {
             const category = parts[0] as 'military' | 'economy' | 'society'
             const key = parts[1]
-            
+
             if (category === 'economy' && key in updatedEconomy) {
               const currentVal = (updatedEconomy as any)[key]
               if (typeof currentVal === 'number') {
-                (updatedEconomy as any)[key] = Math.max(0, Math.min(100, currentVal + delta))
+                (updatedEconomy as any)[key] = Math.max(0, Math.min(100, currentVal + clampedDelta))
                 hasChanges = true
               }
             } else if (category === 'military' && key in updatedMilitary) {
               const currentVal = (updatedMilitary as any)[key]
               if (typeof currentVal === 'number') {
-                (updatedMilitary as any)[key] = Math.max(0, Math.min(100, currentVal + delta))
+                (updatedMilitary as any)[key] = Math.max(0, Math.min(100, currentVal + clampedDelta))
                 hasChanges = true
               }
             } else if (category === 'society') {
               const raw = (updatedSociety as any)[key]
               if (typeof raw === 'number') {
                 const clampMax: number = key === 'population' ? 2000 : 100
-                ;(updatedSociety as any)[key] = Math.max(0, Math.min(clampMax, raw + delta))
+                ;(updatedSociety as any)[key] = Math.max(0, Math.min(clampMax, raw + clampedDelta))
                 hasChanges = true
               }
             }
           } else if (parts.length === 1 && parts[0] === 'coldWarScore') {
-            state.modifyColdWarScore(countryId, delta)
+            state.modifyColdWarScore(countryId, clampedDelta)
           }
         }
 
@@ -337,6 +353,47 @@ export function applyActionResult(state: GameStore, side: Side, result: ActionRe
     }
   }
 
+  // Apply active situation changes (AI authority)
+  if (result.situationChanges && Array.isArray(result.situationChanges)) {
+    for (const change of result.situationChanges) {
+      const { id, action, progressDelta, endReason } = change
+      const sit = state.activeSituations.find(s => s.id === id)
+      if (sit) {
+        if (action === 'END') {
+          state.endSituation(id)
+          state.addNewsItem({
+            id: `sit_end_${id}_${Date.now()}`,
+            turn: state.turn,
+            year: state.year,
+            headline: `${sit.name}宣告结束`,
+            summary: endReason || `${sit.name}已平息解决。`,
+            bias: 'NEUTRAL',
+            sourceRegion: sit.affectedRegion || 'global',
+          })
+        } else if (action === 'ADVANCE') {
+          if (sit.currentStage < sit.stages.length - 1) {
+            sit.currentStage += 1
+            sit.stageProgress = 0
+            sit.cwsImpact = sit.stages[sit.currentStage].cwsModifier
+            const newStage = sit.stages[sit.currentStage]
+            if (newStage?.effects) {
+              for (const effect of newStage.effects) {
+                if (effect.type === 'TERRITORY_CHANGE' && effect.target) {
+                  const [featureId, newOwnerId] = effect.target.split(':')
+                  if (featureId && newOwnerId && (state as any).territoryOverrides) {
+                    ;(state as any).territoryOverrides[featureId] = newOwnerId
+                  }
+                }
+              }
+            }
+          }
+        } else if (action === 'PROGRESS' && typeof progressDelta === 'number') {
+          sit.stageProgress = Math.max(0, sit.stageProgress + progressDelta)
+        }
+      }
+    }
+  }
+
   // Create AI Dynamic Event
   if (result.newEvent) {
     const newSit = result.newEvent
@@ -361,56 +418,84 @@ export async function resolvePendingActions(state: GameStore, side: Side): Promi
   for (const action of pendingActions) {
     let result: ActionResult
 
-    // Attempt API Call first if settings has a key
-    const apiSettings = (state as any).apiSettings || {}
-    const apiKey = apiSettings.apiKey || ''
-    const provider = apiSettings.provider || 'openai'
-
-    if (apiKey) {
-      try {
-        const response = await fetch(`${BASE_PATH}/api/ai/judge`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action,
-            gameState: state,
-            apiKey,
-            provider,
-            activePlayerSide: side
-          })
-        })
-        const data = await response.json()
-        if (data.result) {
-          result = {
-            actionId: action.id,
-            validated: data.result.validated,
-            rejectionReason: data.result.rejectionReason || '',
-            categoryMatch: data.result.categoryMatch,
-            outcome: data.result.outcome || '',
-            effects: {
-              cwsChanges: data.result.effects?.cwsChanges || {},
-              influenceShift: data.result.effects?.influenceShift || [],
-              budgetChange: data.result.effects?.budgetChange || 0,
-              prestigeChange: data.result.effects?.prestigeChange || 0,
-              publicSupportChange: data.result.effects?.publicSupportChange || 0,
-              victoryScoreChange: data.result.effects?.victoryScoreChange || 0,
-              globalTensionChange: data.result.effects?.globalTensionChange || 0,
-            },
-            countryStatsChanges: data.result.countryStatsChanges || {},
-            alignmentChanges: data.result.alignmentChanges || {},
-            newBuffs: data.result.newBuffs || [],
-            newEvent: data.result.newEvent,
-            newsHeadlines: data.result.newsHeadlines || []
-          }
-        } else {
-          throw new Error('API failed to respond with result')
-        }
-      } catch (err) {
-        console.warn('API Route failed, falling back to local Rule Engine:', err)
-        result = resolveAction(action, side, state.countries, state.turn, state.year, state.globalTension)
+    // --- Double Guardrail Pre-Check (Local Hard Rules Enforcement) ---
+    const validation = checkHardRules(action, side, state.countries, state.year, state.globalTension)
+    if (!validation.valid) {
+      result = {
+        actionId: action.id,
+        validated: false,
+        rejectionReason: validation.reason,
+        categoryMatch: false,
+        outcome: '行动被本地规则引擎强行驳回（安全护栏）',
+        effects: { cwsChanges: {}, influenceShift: [], budgetChange: 0, prestigeChange: 0, publicSupportChange: 0, victoryScoreChange: 0, globalTensionChange: 0 },
+        newsHeadlines: [{
+          headline: `行动被驳回：${validation.reason.substring(0, 30)}...`,
+          summary: `行动描述：${action.description}`,
+          bias: 'NEUTRAL'
+        }]
       }
     } else {
-      result = resolveAction(action, side, state.countries, state.turn, state.year, state.globalTension)
+      const apiSettings = (state as any).apiSettings || {}
+      const apiKey = apiSettings.apiKey || ''
+      const provider = apiSettings.provider || 'openai'
+
+      if (apiKey) {
+        try {
+          const response = await fetch(`${BASE_PATH}/api/ai/judge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action,
+              gameState: state,
+              apiKey,
+              provider,
+              activePlayerSide: side
+            })
+          })
+          const data = await response.json()
+          if (data.result) {
+            result = {
+              actionId: action.id,
+              validated: data.result.validated,
+              rejectionReason: data.result.rejectionReason || '',
+              categoryMatch: data.result.categoryMatch,
+              outcome: data.result.outcome || '',
+              effects: {
+                cwsChanges: data.result.effects?.cwsChanges || {},
+                influenceShift: data.result.effects?.influenceShift || [],
+                budgetChange: data.result.effects?.budgetChange || 0,
+                prestigeChange: data.result.effects?.prestigeChange || 0,
+                publicSupportChange: data.result.effects?.publicSupportChange || 0,
+                victoryScoreChange: data.result.effects?.victoryScoreChange || 0,
+                globalTensionChange: data.result.effects?.globalTensionChange || 0,
+              },
+              countryStatsChanges: data.result.countryStatsChanges || {},
+              alignmentChanges: data.result.alignmentChanges || {},
+              newBuffs: data.result.newBuffs || [],
+              situationChanges: data.result.situationChanges || [],
+              newEvent: data.result.newEvent,
+              newsHeadlines: data.result.newsHeadlines || []
+            }
+          } else {
+            throw new Error('API failed to respond with result')
+          }
+        } catch (err) {
+          console.warn('API Route failed, falling back to local Rule Engine:', err)
+          result = resolveAction(action, side, state.countries, state.turn, state.year, state.globalTension)
+        }
+      } else {
+        result = resolveAction(action, side, state.countries, state.turn, state.year, state.globalTension)
+      }
+    }
+
+    // Double Check: Ensure rejected actions from LLM are strictly cleared of state mutations
+    if (!result.validated) {
+      result.effects = { cwsChanges: {}, influenceShift: [], budgetChange: 0, prestigeChange: 0, publicSupportChange: 0, victoryScoreChange: 0, globalTensionChange: 0 }
+      result.countryStatsChanges = {}
+      result.alignmentChanges = {}
+      result.newBuffs = []
+      result.situationChanges = []
+      result.newEvent = undefined
     }
 
     state.resolvePlayerAction(side, action.id, result.validated ? 'RESOLVED' : 'REJECTED')

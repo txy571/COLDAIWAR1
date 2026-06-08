@@ -57,6 +57,7 @@ export default function Home() {
   const [view, setView] = useState<'lobby' | 'game'>('lobby')
   const [faction, setFaction] = useState<'usa' | 'ussr' | null>(null)
   const [mpRoomId, setMpRoomId] = useState<string | null>(null)
+  const [roomActivePlayers, setRoomActivePlayers] = useState<string[]>([])
   const resetGame = useGameStore(s => s.resetGame)
 
   // --- Left Sidebar Tab ---
@@ -225,6 +226,14 @@ export default function Home() {
         case 'PLAYER_JOINED':
           setMpMessages((prev) => [...prev, ev.message])
           break
+        case 'PLAYERS_CHANGED':
+          setRoomActivePlayers(ev.activePlayers)
+          break
+        case 'GAME_STATE_SYNC':
+          if (ev.gameState) {
+            store.loadGameState(ev.gameState)
+          }
+          break
       }
     })
   }
@@ -235,15 +244,53 @@ export default function Home() {
     }
   }
 
+  const handleLeaveRoom = () => {
+    if (typeof window !== 'undefined' && (window as any).mpManager) {
+      (window as any).mpManager.disconnect()
+      ;(window as any).mpManager = null
+    }
+    setMpRoomId(null)
+    setFaction(null)
+    setOnlineTimer(null)
+    setRoomActivePlayers([])
+    setView('lobby')
+  }
+
   const handleAdvancePhase = async () => {
+    const isMultiplayer = mpRoomId !== null && (window as any).mpManager
+    const role = faction // 'usa' | 'ussr'
+
+    // Determine if we are authoritative for this transition
+    let isAuthoritative = false
+    if (!isMultiplayer) {
+      isAuthoritative = true
+    } else {
+      if (phase === 'USA_ACTION') {
+        isAuthoritative = (role === 'usa')
+      } else if (phase === 'USSR_ACTION') {
+        isAuthoritative = (role === 'ussr')
+      } else if (phase === 'AI_EVENT' || phase === 'RESOLVE') {
+        // USA is Host. If USA is not in the active players, USSR is Host.
+        isAuthoritative = (role === 'usa') || (role === 'ussr' && !roomActivePlayers.includes('usa'))
+      }
+    }
+
+    if (!isAuthoritative) {
+      console.log('Not authoritative client for phase', phase, '- waiting for network update.')
+      return
+    }
+
     audioManager.playTick()
     if (store.globalTension > 75) {
       audioManager.playAlert()
     }
     const currentPhase = store.phase
-    // Lock: player can only advance their own faction's turn
-    if (currentPhase === 'USA_ACTION' && faction !== 'usa') return
-    if (currentPhase === 'USSR_ACTION' && faction !== 'ussr') return
+
+    // Local locks (redundancy for single player)
+    if (!isMultiplayer) {
+      if (currentPhase === 'USA_ACTION' && faction !== 'usa') return
+      if (currentPhase === 'USSR_ACTION' && faction !== 'ussr') return
+    }
 
     switch (currentPhase) {
       case 'AI_EVENT':
@@ -269,6 +316,12 @@ export default function Home() {
           store.advancePhase()
         }
         break
+    }
+
+    // Broadcast the updated state to other clients in the room
+    if (isMultiplayer) {
+      const updatedState = useGameStore.getState()
+      ;(window as any).mpManager.sendGameState(updatedState)
     }
   }
 
@@ -354,21 +407,39 @@ export default function Home() {
               }`}>{phaseLabel}</span>
             </div>
 
-            <button
-              onClick={handleAdvancePhase}
-              disabled={
-                (phase === 'USA_ACTION' && faction !== 'usa') ||
-                (phase === 'USSR_ACTION' && faction !== 'ussr')
+            {/* Advance Button (authoritative lock) */}
+            {(() => {
+              const isMultiplayer = mpRoomId !== null && (window as any).mpManager
+              let isMyTurnToAdvance = false
+              if (!isMultiplayer) {
+                isMyTurnToAdvance = (phase === 'AI_EVENT') ||
+                  (phase === 'RESOLVE') ||
+                  (phase === 'USA_ACTION' && faction === 'usa') ||
+                  (phase === 'USSR_ACTION' && faction === 'ussr')
+              } else {
+                if (phase === 'USA_ACTION') {
+                  isMyTurnToAdvance = (faction === 'usa')
+                } else if (phase === 'USSR_ACTION') {
+                  isMyTurnToAdvance = (faction === 'ussr')
+                } else if (phase === 'AI_EVENT' || phase === 'RESOLVE') {
+                  isMyTurnToAdvance = (faction === 'usa') || (faction === 'ussr' && !roomActivePlayers.includes('usa'))
+                }
               }
-              className={`px-3 py-1 text-xs font-bold rounded-sm tracking-wider ${
-                (phase === 'USA_ACTION' && faction !== 'usa') ||
-                (phase === 'USSR_ACTION' && faction !== 'ussr')
-                  ? 'bg-stone-700/30 text-stone-600 cursor-not-allowed border border-stone-700/30'
-                  : 'brass-button text-stone-900'
-              }`}
-            >
-              {advanceLabel}
-            </button>
+
+              return (
+                <button
+                  onClick={handleAdvancePhase}
+                  disabled={!isMyTurnToAdvance}
+                  className={`px-3 py-1 text-xs font-bold rounded-sm tracking-wider ${
+                    !isMyTurnToAdvance
+                      ? 'bg-stone-700/30 text-stone-600 cursor-not-allowed border border-stone-700/30'
+                      : 'brass-button text-stone-900'
+                  }`}
+                >
+                  {isMultiplayer && !isMyTurnToAdvance ? '⏳ 等待对手...' : advanceLabel}
+                </button>
+              )
+            })()}
           </div>
         </header>
 
@@ -601,8 +672,8 @@ export default function Home() {
               onlineTimer={onlineTimer}
               mpMessages={mpMessages}
               mpRole={faction}
-              onJoinRoom={() => {}}
-              onLeaveRoom={() => {}}
+              onJoinRoom={(rid, sd) => handleLobbyGameStart(rid, sd, (window as any).mpManager)}
+              onLeaveRoom={handleLeaveRoom}
               onSendChat={handleSendChat}
             />
             <ApiSettings />

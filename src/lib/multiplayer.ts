@@ -7,7 +7,7 @@
 import { getMultiplayerHost, getWsProtocol } from '@/config/multiplayer'
 
 export type MultiplayerEvent =
-  | { type: 'INIT'; side: 'usa' | 'ussr' | 'observer'; gameState: any; timer: number }
+  | { type: 'INIT'; side: 'usa' | 'ussr' | 'observer'; gameState: any; timer: number; activePlayers?: string[] }
   | { type: 'PLAYER_JOINED'; side: string; message: string }
   | { type: 'PLAYER_LEFT'; side: string; message: string }
   | { type: 'GAME_STATE_SYNC'; gameState: any }
@@ -15,6 +15,7 @@ export type MultiplayerEvent =
   | { type: 'TIMER_TICK'; seconds: number }
   | { type: 'TIMER_TIMEOUT'; side: 'usa' | 'ussr' | 'none' }
   | { type: 'CHAT_MSG'; side: string; text: string }
+  | { type: 'PLAYERS_CHANGED'; activePlayers: string[] }
   | { type: 'CONNECTION_ERROR'; message: string }
 
 export class MultiplayerManager {
@@ -102,15 +103,22 @@ export class MultiplayerManager {
         side: this.side,
         gameState: null,
         timer: this.secondsLeft,
+        activePlayers: [this.side],
       })
 
       // Simulate opponent joining after a brief delay
       const opponent = this.side === 'usa' ? 'ussr' : 'usa'
-      this.onEventCallback({
-        type: 'PLAYER_JOINED',
-        side: opponent,
-        message: `[MOCK] ${opponent.toUpperCase()} has joined.`,
-      })
+      setTimeout(() => {
+        this.onEventCallback({
+          type: 'PLAYER_JOINED',
+          side: opponent,
+          message: `[MOCK] ${opponent.toUpperCase()} has joined.`,
+        })
+        this.onEventCallback({
+          type: 'PLAYERS_CHANGED',
+          activePlayers: [this.side, opponent],
+        })
+      }, 1500)
     }, 1000)
   }
 
