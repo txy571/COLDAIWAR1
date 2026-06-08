@@ -34,6 +34,10 @@ import { audioManager } from '@/lib/audio'
 import { i18n } from '@/lib/i18n'
 import type { Situation } from '@/types/situation'
 import type { VictoryResult } from '@/engine/victory'
+import type { Newspaper } from '@/types'
+import { generateLocalNewspaper } from '@/engine/newspaperGenerator'
+import { NewspaperModal } from '@/components/panels/NewspaperModal'
+
 
 export default function Home() {
   const year = useGameStore(s => s.year)
@@ -52,6 +56,96 @@ export default function Home() {
   const [faction, setFaction] = useState<'usa' | 'ussr' | null>(null)
   const resetGame = useGameStore(s => s.resetGame)
 
+  // --- Left Sidebar Tab ---
+  const [leftSidebarTab, setLeftSidebarTab] = useState<'OVERVIEW' | 'NEWSPAPERS'>('OVERVIEW')
+
+  // --- Newspaper states ---
+  const [lastReadYear, setLastReadYear] = useState(1945)
+  const [showNewspaperModal, setShowNewspaperModal] = useState(false)
+  const [selectedNewspaper, setSelectedNewspaper] = useState<Newspaper | null>(null)
+
+  const generateAndShowNewspaper = async (endedYear: number, currentEra: 'POST_WW2' | 'IRON_CURTAIN' | 'INFO_AGE') => {
+    setSelectedNewspaper(null)
+    setShowNewspaperModal(true)
+    
+    const apiKey = localStorage.getItem('ai_judge_api_key') || ''
+    const provider = localStorage.getItem('ai_judge_provider') || 'openai'
+    
+    const yearEvents = store.timeline.filter(e => e.year === endedYear)
+    const yearNews = store.newsFeed.filter(n => n.year === endedYear)
+    
+    const historyOfThisYear = [
+      ...yearEvents.map(e => `[大事记] ${e.title}: ${e.description}`),
+      ...yearNews.map(n => `[新闻] ${n.headline}: ${n.summary}`)
+    ]
+    
+    let newspaperResult: Newspaper
+    
+    if (apiKey) {
+      try {
+        const response = await fetch('/api/ai/newspaper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: endedYear,
+            era: currentEra,
+            globalTension: store.globalTension,
+            historyOfThisYear,
+            apiKey,
+            provider
+          })
+        })
+        const data = await response.json()
+        if (data.result) {
+          newspaperResult = {
+            id: `newspaper_${endedYear}_${Date.now()}`,
+            year: endedYear,
+            headline: data.result.headline,
+            content: data.result.content,
+            era: currentEra
+          }
+        } else {
+          throw new Error('API failed')
+        }
+      } catch (err) {
+        console.warn('AI Newspaper failed, fallback:', err)
+        const local = generateLocalNewspaper(endedYear, currentEra, store)
+        newspaperResult = {
+          id: `newspaper_${endedYear}_${Date.now()}`,
+          year: endedYear,
+          headline: local.headline,
+          content: local.content,
+          era: currentEra
+        }
+      }
+    } else {
+      const local = generateLocalNewspaper(endedYear, currentEra, store)
+      newspaperResult = {
+        id: `newspaper_${endedYear}_${Date.now()}`,
+        year: endedYear,
+        headline: local.headline,
+        content: local.content,
+        era: currentEra
+      }
+    }
+    
+    store.addNewspaper(newspaperResult)
+    setSelectedNewspaper(newspaperResult)
+  }
+
+  useEffect(() => {
+    if (year > lastReadYear) {
+      const endedYear = year - 1
+      const currentEra = store.currentEra
+      setLastReadYear(year)
+      generateAndShowNewspaper(endedYear, currentEra)
+    }
+  }, [year, lastReadYear])
+
+  // --- Responsive states ---
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false)
+  const [showRightSidebar, setShowRightSidebar] = useState(false)
+
   // --- Audio & i18n ---
   const [lang, setLang] = useState<'zh' | 'en'>('zh')
   const [isMuted, setIsMuted] = useState(false)
@@ -63,17 +157,20 @@ export default function Home() {
   }, [])
 
   const handleToggleMute = () => {
+    audioManager.playClick()
     const nextMute = audioManager.toggleMute()
     setIsMuted(nextMute)
   }
 
   const handleToggleLang = () => {
+    audioManager.playClick()
     const nextLang = lang === 'zh' ? 'en' : 'zh'
     i18n.setLocale(nextLang)
     setLang(nextLang)
   }
 
   const handleExportReport = () => {
+    audioManager.playClick()
     const reportText = `=== COLD WAR GRAND STRATEGY WAR REPORT ===\nYear: ${year}\nTurn: ${turn}\nTension: ${globalTension}\n\n=== TIMELINE EVENTS ===\n` +
       store.timeline.map(e => `[${e.year} - Turn ${e.turn}] ${e.title}: ${e.description}`).join('\n')
     
@@ -292,95 +389,166 @@ export default function Home() {
                 (phase === 'USSR_ACTION' && faction !== 'ussr')
                   ? 'bg-stone-700/30 text-stone-600 cursor-not-allowed border border-stone-700/30'
                   : 'brass-button text-stone-900'
-              }`}
-            >
-              {advanceLabel}
-            </button>
-          </div>
-        </header>
+                   <aside className={`fixed lg:relative top-0 bottom-0 left-0 z-30 lg:z-10 w-72 sm:w-80 bg-[var(--bg-sidebar)] border-r-2 border-[var(--border-main)] flex flex-col shrink-0 overflow-y-auto transition-transform duration-300 ${showLeftSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+            {/* Tabs Toggle */}
+            <div className="flex bg-stone-700/10 border-b border-[var(--border-main)]/40 text-center text-[10px] font-bold font-mono tracking-wider">
+              <button
+                onClick={() => { setLeftSidebarTab('OVERVIEW'); audioManager.playClick(); }}
+                className={`flex-1 py-2.5 border-r border-[var(--border-main)]/30 transition-colors ${
+                  leftSidebarTab === 'OVERVIEW'
+                    ? 'bg-[var(--bg-panel)]/40 text-[var(--text-primary)]'
+                    : 'text-[var(--text-muted)] hover:bg-stone-700/5'
+                }`}
+              >
+                📋 全球概览
+              </button>
+              <button
+                onClick={() => { setLeftSidebarTab('NEWSPAPERS'); audioManager.playClick(); }}
+                className={`flex-1 py-2.5 transition-colors ${
+                  leftSidebarTab === 'NEWSPAPERS'
+                    ? 'bg-[var(--bg-panel)]/40 text-[var(--text-primary)]'
+                    : 'text-[var(--text-muted)] hover:bg-stone-700/5'
+                }`}
+              >
+                📰 历史年报 ({(store as any).newspapers?.length || 0})
+              </button>
+            </div>
 
-        {/* ═══ 主体内容 ═══ */}
-        <div className="flex flex-1 overflow-hidden">
-
-          {/* ─── 左侧面板 ─── */}
-          <aside className="w-72 sm:w-80 bg-[var(--bg-sidebar)] border-r-2 border-[var(--border-main)] flex flex-col z-10 shrink-0 overflow-y-auto">
-
-            {/* 战略热点 */}
-            <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
-              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 flex justify-between items-center">
-                <span>🌡 战略热点</span>
-                <span className="font-mono text-[var(--text-muted)]">冷战分</span>
-              </h2>
-              <div className="space-y-2">
-                {cwsRanking.map((c, i) => (
-                  <div
-                    key={c.id}
-                    onClick={() => setSelectedCountryId(c.id)}
-                    className={`flex items-center gap-2 p-1 -mx-1 rounded-sm transition-colors cursor-pointer text-xs ${
-                      selectedCountryId === c.id ? 'bg-[var(--border-main)]/30 ring-1 ring-[var(--border-main)]/50' : 'hover:bg-[var(--border-main)]/10'
-                    }`}
-                  >
-                    <span className="text-[var(--text-muted)] w-4 text-right font-mono">{i + 1}</span>
-                    <span className={`flex-1 font-medium ${
-                      selectedCountryId === c.id ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}>{c.name}</span>
-                    <div className="threat-meter w-16">
+            {leftSidebarTab === 'OVERVIEW' ? (
+              <>
+                {/* 战略热点 */}
+                <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
+                  <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 flex justify-between items-center">
+                    <span>🌡 战略热点</span>
+                    <span className="font-mono text-[var(--text-muted)]">冷战分</span>
+                  </h2>
+                  <div className="space-y-2">
+                    {cwsRanking.map((c, i) => (
                       <div
-                        className={`fill ${c.cws > 75 ? 'bg-red-600' : c.cws > 50 ? 'bg-amber-600' : 'bg-stone-400'}`}
-                        style={{ width: `${c.cws}%` }}
-                      />
-                    </div>
-                    <span className={`font-mono text-xs w-6 text-right font-bold ${
-                      c.cws > 75 ? 'text-red-600' : c.cws > 50 ? 'text-amber-600' : 'text-stone-500'
-                    }`}>{c.cws}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <DoomsdayClock />
-
-            {/* 当前局势 */}
-            <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
-              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3">🚩 当前局势</h2>
-              {activeSituations.length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)] italic">暂无活跃局势</p>
-              ) : (
-                <div className="space-y-2">
-                  {activeSituations.map((sit: Situation) => {
-                    const stage = sit.stages[sit.currentStage]
-                    return (
-                      <div key={sit.id} className="wood-frame bg-[var(--bg-panel)]/40 p-2.5 text-xs rounded-sm">
-                        <div className="font-bold text-[var(--text-primary)] text-xs mb-1">{sit.name}</div>
-                        <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
-                          <span>{stage?.name}</span>
-                          <span className="font-mono">({sit.stageProgress}/{stage?.durationTurns})</span>
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCountryId(c.id)
+                          audioManager.playClick()
+                        }}
+                        className={`flex items-center gap-2 p-1 -mx-1 rounded-sm transition-colors cursor-pointer text-xs ${
+                          selectedCountryId === c.id ? 'bg-[var(--border-main)]/30 ring-1 ring-[var(--border-main)]/50' : 'hover:bg-[var(--border-main)]/10'
+                        }`}
+                      >
+                        <span className="text-[var(--text-muted)] w-4 text-right font-mono">{i + 1}</span>
+                        <span className={`flex-1 font-medium ${
+                          selectedCountryId === c.id ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                        }`}>{c.name}</span>
+                        <div className="threat-meter w-16">
+                          <div
+                            className={`fill ${c.cws > 75 ? 'bg-red-600' : c.cws > 50 ? 'bg-amber-600' : 'bg-stone-400'}`}
+                            style={{ width: `${c.cws}%` }}
+                          />
                         </div>
-                        <div className="threat-meter mt-1.5">
-                          <div className="fill bg-amber-600" style={{ width: `${(sit.stageProgress / (stage?.durationTurns || 1)) * 100}%` }} />
-                        </div>
-                        <div className="text-[10px] text-red-700 font-bold mt-1">冷战分 +{sit.cwsImpact}</div>
+                        <span className={`font-mono text-xs w-6 text-right font-bold ${
+                          c.cws > 75 ? 'text-red-600' : c.cws > 50 ? 'text-amber-600' : 'text-stone-500'
+                        }`}>{c.cws}</span>
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* 区域局势 */}
-            <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
-              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3">📊 区域局势</h2>
-              <div className="space-y-3">
-                {Object.entries(store.regionalScores).slice(0, 8).map(([key, r]) => (
-                  <div key={key}>
-                    <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
-                      <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                      <span className="font-mono">{r.cws}</span>
+                <DoomsdayClock />
+
+                {/* 当前局势 */}
+                <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
+                  <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3">🚩 当前局势</h2>
+                  {activeSituations.length === 0 ? (
+                    <p className="text-xs text-[var(--text-muted)] italic">暂无活跃局势</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {activeSituations.map((sit: Situation) => {
+                        const stage = sit.stages[sit.currentStage]
+                        return (
+                          <div key={sit.id} className="wood-frame bg-[var(--bg-panel)]/40 p-2.5 text-xs rounded-sm">
+                            <div className="font-bold text-[var(--text-primary)] text-xs mb-1">{sit.name}</div>
+                            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+                              <span>{stage?.name}</span>
+                              <span className="font-mono">({sit.stageProgress}/{stage?.durationTurns})</span>
+                            </div>
+                            <div className="threat-meter mt-1.5">
+                              <div className="fill bg-amber-600" style={{ width: `${(sit.stageProgress / (stage?.durationTurns || 1)) * 100}%` }} />
+                            </div>
+                            <div className="text-[10px] text-red-700 font-bold mt-1">冷战分 +{sit.cwsImpact}</div>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div className="h-1.5 w-full bg-[var(--border-main)]/35 rounded-full overflow-hidden flex">
-                      <div className="bg-blue-500/70 h-full transition-all" style={{ width: `${Math.min(100, r.cws)}%` }} />
-                      <div className="bg-red-500/70 h-full transition-all" style={{ width: `${Math.max(0, Math.min(100 - r.cws, r.cws * 0.4))}%` }} />
-                    </div>
+                  )}
+                </div>
+
+                {/* 区域局势 */}
+                <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
+                  <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3">📊 区域局势</h2>
+                  <div className="space-y-3">
+                    {Object.entries(store.regionalScores).slice(0, 8).map(([key, r]) => (
+                      <div key={key}>
+                        <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
+                          <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                          <span className="font-mono">{r.cws}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-[var(--border-main)]/35 rounded-full overflow-hidden flex">
+                          <div className="bg-blue-500/70 h-full transition-all" style={{ width: `${Math.min(100, r.cws)}%` }} />
+                          <div className="bg-red-500/70 h-full transition-all" style={{ width: `${Math.max(0, Math.min(100 - r.cws, r.cws * 0.4))}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 热点警报 */}
+                {flashpoints.length > 0 && (
+                  <div className="p-4 sm:p-5 mt-auto border-t-2 border-red-700/30 bg-red-900/5">
+                    <h2 className="text-[10px] font-bold text-red-700 uppercase tracking-[0.2em] mb-2">⚠ 热点警报</h2>
+                    {flashpoints.map(f => (
+                      <p key={f.id} className="text-[10px] text-red-800 font-medium">
+                        {f.name} · 冷战分 {f.coldWarScore}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {/* 边界变更面板 */}
+                <BorderChanges />
+              </>
+            ) : (
+              <div className="p-4 space-y-3">
+                <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 flex items-center justify-between">
+                  <span>📰 历史年报归档</span>
+                  <span className="font-mono text-[9px] text-[var(--text-muted)]">({(store as any).newspapers?.length || 0} 期)</span>
+                </h2>
+                {(!(store as any).newspapers || (store as any).newspapers.length === 0) ? (
+                  <p className="text-xs text-[var(--text-muted)] italic py-8 text-center">当前暂无已生成的年报特刊</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {((store as any).newspapers as Newspaper[]).map((np) => (
+                      <div
+                        key={np.id}
+                        onClick={() => {
+                          setSelectedNewspaper(np)
+                          setShowNewspaperModal(true)
+                          audioManager.playClick()
+                        }}
+                        className="p-3 bg-[var(--bg-panel)]/40 border border-[var(--border-main)]/50 hover:border-[var(--border-dark)] rounded-sm cursor-pointer transition-all hover:-translate-y-0.5 shadow-sm active:translate-y-0"
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-xs text-[var(--text-primary)]">{np.year} 年历史特刊</span>
+                          <span className="text-[8px] font-mono px-1 py-0.5 bg-stone-800/20 text-[var(--text-muted)] rounded-sm shrink-0">
+                            {np.era === 'POST_WW2' ? '战后' : np.era === 'IRON_CURTAIN' ? '铁幕' : '智能'}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-[var(--text-muted)] truncate mt-1">{np.headline}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </aside>>
                   </div>
                 ))}
               </div>
@@ -407,6 +575,30 @@ export default function Home() {
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')]" />
             <div className="flex-1 relative">
               <WorldMap />
+              
+              {/* Floating mobile/tablet UI panel triggers */}
+              <button
+                onClick={() => {
+                  setShowLeftSidebar(!showLeftSidebar);
+                  setShowRightSidebar(false);
+                  audioManager.playClick();
+                }}
+                className="lg:hidden absolute top-3 left-20 text-[10px] px-2.5 py-1 bg-stone-700/80 text-stone-200 border border-stone-600 rounded-sm hover:bg-stone-700 z-20 font-mono font-bold"
+              >
+                📋 {showLeftSidebar ? '关闭' : '概览'}
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowRightSidebar(!showRightSidebar);
+                  setShowLeftSidebar(false);
+                  audioManager.playClick();
+                }}
+                className="lg:hidden absolute top-3 right-3 text-[10px] px-2.5 py-1 bg-stone-700/80 text-stone-200 border border-stone-600 rounded-sm hover:bg-stone-700 z-20 font-mono font-bold"
+              >
+                🎯 {showRightSidebar ? '关闭' : '指令'}
+              </button>
+
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[var(--bg-panel)]/90 border-2 border-[var(--border-main)] px-4 py-1.5 shadow-md rounded-sm text-[10px] text-[var(--text-primary)] whitespace-nowrap">
                 🗺 滚轮缩放 · 拖拽平移 · 双击放大
               </div>
@@ -418,7 +610,7 @@ export default function Home() {
           </main>
 
           {/* ─── 右侧面板 ─── */}
-          <aside className="w-72 bg-[var(--bg-sidebar)] border-l-2 border-[var(--border-main)] flex flex-col overflow-y-auto shrink-0">
+          <aside className={`fixed lg:relative top-0 bottom-0 right-0 z-30 lg:z-10 w-72 bg-[var(--bg-sidebar)] border-l-2 border-[var(--border-main)] flex flex-col shrink-0 overflow-y-auto transition-transform duration-300 ${showRightSidebar ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
             <div className="border-b-2 border-[var(--border-main)]/40">
               <div className="p-3 bg-[var(--bg-panel)]/10 border-b border-[var(--border-main)]/30">
                 <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">📋 情报分析</h2>
@@ -459,6 +651,16 @@ export default function Home() {
       {/* Event Popup + Resolution Results */}
       <EventPopup />
       <ResolutionResults />
+
+      {/* Newspaper Modal Overlay */}
+      {showNewspaperModal && (
+        <NewspaperModal
+          newspaper={selectedNewspaper}
+          onClose={() => setShowNewspaperModal(false)}
+          year={lastReadYear}
+          era={store.currentEra}
+        />
+      )}
 
       {/* Victory Screen */}
       {victory && (

@@ -38,6 +38,30 @@ export const createTechSlice: StateCreator<TechSlice, [["zustand/immer", never],
     if (node.researchProgress >= node.cost) {
       node.researched = true
       node.researchProgress = node.cost
+
+      // Apply tech effects dynamically to the player's country stats
+      const countryId = side // 'usa' or 'ussr'
+      const country = (s as any).countries?.[countryId]
+      if (country && node.effects) {
+        for (const effect of node.effects) {
+          const { target, modifier, value } = effect
+          const parts = target.split('.')
+          if (parts.length === 2) {
+            const category = parts[0] as 'military' | 'economy' | 'society'
+            const key = parts[1]
+            if (country[category] && key in country[category]) {
+              const currentVal = (country[category] as any)[key]
+              if (modifier === 'add') {
+                if (typeof currentVal === 'number') {
+                  (country[category] as any)[key] = currentVal + value
+                }
+              } else if (modifier === 'set') {
+                (country[category] as any)[key] = typeof currentVal === 'boolean' ? !!value : value
+              }
+            }
+          }
+        }
+      }
     }
   }),
 

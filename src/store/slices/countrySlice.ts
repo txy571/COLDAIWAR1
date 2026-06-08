@@ -40,8 +40,21 @@ export const createCountrySlice: StateCreator<CountrySlice, [["zustand/immer", n
   }),
 
   modifyInfluence: (id, side, delta) => set((s) => {
-    if (s.countries[id]) {
-      s.countries[id].influence[side] = Math.max(0, Math.min(100, s.countries[id].influence[side] + delta))
+    const country = s.countries[id]
+    if (country) {
+      country.influence[side] = Math.max(0, Math.min(100, country.influence[side] + delta))
+      
+      // Dynamic alignment transition based on influence difference
+      const usa = country.influence.usa
+      const ussr = country.influence.ussr
+      const diff = usa - ussr
+      if (diff >= 30) {
+        country.alignment = 'USA_ALLY'
+      } else if (diff <= -30) {
+        country.alignment = 'USSR_ALLY'
+      } else if (Math.abs(diff) < 15) {
+        country.alignment = 'NON_ALIGNED'
+      }
     }
   }),
 

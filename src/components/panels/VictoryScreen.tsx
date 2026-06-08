@@ -9,6 +9,8 @@ import { useState, useEffect } from 'react'
 import type { VictoryResult } from '@/engine/victory'
 import { generateEpilogue } from '@/engine/victory'
 import type { GameStore } from '@/store/gameStore'
+import { audioManager } from '@/lib/audio'
+
 
 interface VictoryScreenProps {
   result: VictoryResult
@@ -86,7 +88,10 @@ export function VictoryScreen({ result, store, onRestart }: VictoryScreenProps) 
           {/* Buttons */}
           <div className="flex gap-3 pt-3">
             <button
-              onClick={onRestart}
+              onClick={() => {
+                audioManager.playClick()
+                onRestart()
+              }}
               className="brass-button flex-1 py-2 text-xs font-bold text-stone-900 rounded-sm tracking-wider"
             >
               🔄 重新开始

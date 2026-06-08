@@ -77,5 +77,6 @@ export const createGameSlice: StateCreator<GameSlice, [["zustand/immer", never],
     s.phase = 'AI_EVENT'
     s.globalTension = 20
     s.selectedCountryId = null
+    if ((s as any).newspapers) (s as any).newspapers = []
   }),
 })

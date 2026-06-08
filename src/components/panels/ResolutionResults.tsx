@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { on } from '@/lib/eventBus'
+import { audioManager } from '@/lib/audio'
 
 export interface ResolutionChange {
   type: 'cws' | 'influence' | 'budget' | 'prestige' | 'score' | 'rejection'
@@ -31,6 +32,10 @@ export function ResolutionResults() {
     return on('resolution', (event: ResolutionEvent) => {
       setCurrentEvent(event)
       setVisible(true)
+      const hasRejected = event.changes.some(c => c.type === 'rejection')
+      if (hasRejected) {
+        audioManager.playLose()
+      }
       const timer = setTimeout(() => setVisible(false), 8000)
       return () => clearTimeout(timer)
     })

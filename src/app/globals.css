@@ -262,53 +262,7 @@ body {
 }
 
 /* ═══ Responsive Breakpoints ═══ */
-@media (max-width: 1440px) {
-  /* Shrink central map space a bit, layout remains 3-column */
-}
-
-@media (max-width: 1200px) {
-  /* Left sidebar folds to narrow layout, right panel stays */
-  aside.w-72 {
-    width: 240px;
-  }
-}
-
-@media (max-width: 1024px) {
-  /* Multi-panels overlap as floaters, map spans full width */
-  .flex-1.overflow-hidden {
-    position: relative;
-  }
-  aside {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    z-index: 20;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
-  aside:first-of-type {
-    left: 0;
-    width: 250px;
-  }
-  aside:last-of-type {
-    right: 0;
-    width: 250px;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Single-column vertical layout with toggle controls */
-  .flex-1.overflow-hidden {
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  aside {
-    position: relative !important;
-    width: 100% !important;
-    height: auto !important;
-    left: auto !important;
-    right: auto !important;
-  }
-}
+/* Tailwind class utilities handle sliding sidebars at 1024px (lg breakpoint) */
 
 /* ═══ prefers-reduced-motion ═══ */
 @media (prefers-reduced-motion: reduce) {

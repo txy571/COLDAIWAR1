@@ -5,8 +5,10 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { audioManager } from '@/lib/audio'
 
 export function ApiSettings() {
+
   const [open, setOpen] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [provider, setProvider] = useState<'openai' | 'anthropic'>('openai')
@@ -14,6 +16,7 @@ export function ApiSettings() {
   const [saved, setSaved] = useState(false)
 
   const handleSave = useCallback(() => {
+    audioManager.playClick()
     localStorage.setItem('ai_judge_api_key', apiKey.trim())
     localStorage.setItem('ai_judge_provider', provider)
     localStorage.setItem('multiplayer_worker_host', workerHost.trim())
@@ -22,6 +25,7 @@ export function ApiSettings() {
   }, [apiKey, provider, workerHost])
 
   const handleClear = useCallback(() => {
+    audioManager.playClick()
     localStorage.removeItem('ai_judge_api_key')
     localStorage.removeItem('ai_judge_provider')
     localStorage.removeItem('multiplayer_worker_host')
@@ -43,7 +47,7 @@ export function ApiSettings() {
   return (
     <div className="border-t-2 border-stone-400/60 bg-[#dfd9cb]/50">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open); audioManager.playClick(); }}
         className="w-full p-2 text-[9px] text-stone-500 hover:text-stone-700 font-mono tracking-wider flex items-center justify-center gap-1 transition-colors"
       >
         {open ? '▼' : '▶'} ⚙️ 全局接口设置
@@ -57,13 +61,13 @@ export function ApiSettings() {
                 className={`flex-1 py-1 text-[9px] border rounded-sm font-mono ${
                   provider === 'openai' ? 'bg-stone-700 text-stone-100 border-stone-700' : 'bg-stone-100 text-stone-500 border-stone-300'
                 }`}
-                onClick={() => setProvider('openai')}
+                onClick={() => { setProvider('openai'); audioManager.playClick(); }}
               >OpenAI</button>
               <button
                 className={`flex-1 py-1 text-[9px] border rounded-sm font-mono ${
                   provider === 'anthropic' ? 'bg-stone-700 text-stone-100 border-stone-700' : 'bg-stone-100 text-stone-500 border-stone-300'
                 }`}
-                onClick={() => setProvider('anthropic')}
+                onClick={() => { setProvider('anthropic'); audioManager.playClick(); }}
               >Anthropic</button>
             </div>
             <input

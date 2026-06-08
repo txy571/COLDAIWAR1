@@ -4,6 +4,9 @@
  */
 'use client'
 
+import { audioManager } from '@/lib/audio'
+
+
 interface FactionSelectProps {
   onSelect: (faction: 'usa' | 'ussr') => void
 }
@@ -27,7 +30,10 @@ export function FactionSelect({ onSelect }: FactionSelectProps) {
         <div className="p-6 space-y-4">
           {/* USA */}
           <button
-            onClick={() => onSelect('usa')}
+            onClick={() => {
+              audioManager.playClick()
+              onSelect('usa')
+            }}
             className="w-full p-4 bg-blue-950/30 border-2 border-blue-800/50 rounded-sm hover:bg-blue-900/30 hover:border-blue-600 transition-all group text-left"
           >
             <div className="flex items-center gap-4">
@@ -50,7 +56,10 @@ export function FactionSelect({ onSelect }: FactionSelectProps) {
 
           {/* USSR */}
           <button
-            onClick={() => onSelect('ussr')}
+            onClick={() => {
+              audioManager.playClick()
+              onSelect('ussr')
+            }}
             className="w-full p-4 bg-red-950/30 border-2 border-red-800/50 rounded-sm hover:bg-red-900/30 hover:border-red-600 transition-all group text-left"
           >
             <div className="flex items-center gap-4">

@@ -3,12 +3,13 @@
  * @desc 历史时间线(最多200条)、新闻馈送(最多50条)、Buff系统(时长/过期)
  */
 import type { StateCreator } from 'zustand'
-import type { TimelineEvent, NewsItem, Buff } from '@/types'
+import type { TimelineEvent, NewsItem, Buff, Newspaper } from '@/types'
 
 export interface EventSlice {
   timeline: TimelineEvent[]
   newsFeed: NewsItem[]
   activeBuffs: Buff[]
+  newspapers: Newspaper[]
 
   addTimelineEvent: (event: TimelineEvent) => void
   addNewsItem: (item: NewsItem) => void
@@ -16,12 +17,15 @@ export interface EventSlice {
   removeBuff: (buffId: string) => void
   tickBuffs: () => void
   clearNewsFeed: () => void
+  addNewspaper: (np: Newspaper) => void
 }
+
 
 export const createEventSlice: StateCreator<EventSlice, [["zustand/immer", never], never], [], EventSlice> = (set) => ({
   timeline: [],
   newsFeed: [],
   activeBuffs: [],
+  newspapers: [],
 
   addTimelineEvent: (event) => set((s) => {
     s.timeline.push(event)
@@ -48,4 +52,8 @@ export const createEventSlice: StateCreator<EventSlice, [["zustand/immer", never
   }),
 
   clearNewsFeed: () => set((s) => { s.newsFeed = [] }),
+
+  addNewspaper: (np) => set((s) => {
+    s.newspapers.push(np)
+  }),
 })

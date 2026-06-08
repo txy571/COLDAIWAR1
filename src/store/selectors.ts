@@ -44,6 +44,62 @@ export const selectActiveBuffsByTarget = (
          (targetRegion !== undefined && b.targetRegion === targetRegion)
   )
 
+export const selectEffectiveCountry = (state: GameStore, countryId: string): Country | null => {
+  const baseCountry = state.countries[countryId]
+  if (!baseCountry) return null
+
+  // Deep clone to avoid mutating the original store object
+  const country = JSON.parse(JSON.stringify(baseCountry)) as Country
+
+  // Get active buffs for this country or its region
+  const buffs = state.activeBuffs.filter(
+    (b: Buff) => b.targetCountry === countryId || (b.targetRegion && b.targetRegion === baseCountry.region)
+  )
+
+  for (const buff of buffs) {
+    const effect = buff.effect
+    if (!effect) continue
+    const { target, modifier, value } = effect
+    const parts = target.split('.')
+    if (parts.length === 2) {
+      const category = parts[0] as 'military' | 'economy' | 'society'
+      const key = parts[1]
+      if (country[category] && key in country[category]) {
+        const currentVal = (country[category] as any)[key]
+        if (modifier === 'add') {
+          if (typeof currentVal === 'number') {
+            (country[category] as any)[key] = currentVal + value
+          }
+        } else if (modifier === 'set') {
+          (country[category] as any)[key] = typeof currentVal === 'boolean' ? !!value : value
+        } else if (modifier === 'multiply') {
+          if (typeof currentVal === 'number') {
+            (country[category] as any)[key] = currentVal * value
+          }
+        }
+      }
+    } else if (parts.length === 1) {
+      const key = parts[0]
+      if (key in country) {
+        const currentVal = (country as any)[key]
+        if (modifier === 'add') {
+          if (typeof currentVal === 'number') {
+            (country as any)[key] = currentVal + value
+          }
+        } else if (modifier === 'set') {
+          (country as any)[key] = typeof currentVal === 'boolean' ? !!value : value
+        } else if (modifier === 'multiply') {
+          if (typeof currentVal === 'number') {
+            (country as any)[key] = currentVal * value
+          }
+        }
+      }
+    }
+  }
+
+  return country
+}
+
 export const selectRecentTimeline = (state: GameStore, count: number = 10): TimelineEvent[] =>
   state.timeline.slice(-count)
 

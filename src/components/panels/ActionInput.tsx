@@ -10,6 +10,8 @@
 import { useState, useCallback } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import type { ActionCategory, PlayerAction, Side } from '@/types'
+import { audioManager } from '@/lib/audio'
+
 
 const MAX_CHARS = 200
 
@@ -18,6 +20,7 @@ const CATEGORIES: { id: ActionCategory; label: string; icon: string }[] = [
   { id: 'MILITARY', label: '军事', icon: '⚔️' },
   { id: 'POLITICAL', label: '政治', icon: '🏛' },
   { id: 'DIPLOMATIC', label: '外交', icon: '🤝' },
+  { id: 'TECH', label: '科技', icon: '🔬' },
 ]
 
 export function ActionInput() {
@@ -50,8 +53,10 @@ function ActionForm({ side }: { side: Side }) {
   const charsLeft = MAX_CHARS - description.length
 
   const handleSubmit = useCallback(() => {
+    audioManager.playClick()
     const text = description.trim()
     if (!text || text.length > MAX_CHARS) return
+
 
     const action: PlayerAction = {
       id: `action_${Date.now()}`,
@@ -130,7 +135,10 @@ function ActionForm({ side }: { side: Side }) {
                 ? 'bg-[var(--border-dark)] text-[var(--text-light)] border-[var(--border-dark)] shadow-sm'
                 : 'bg-[var(--bg-panel)]/40 text-[var(--text-primary)] border-[var(--border-main)] hover:bg-[var(--bg-panel)]/80'
             }`}
-            onClick={() => setCategory(c.id)}
+            onClick={() => {
+              setCategory(c.id)
+              audioManager.playClick()
+            }}
           >{c.icon}<span className="ml-0.5 text-[9px]">{c.label}</span></button>
         ))}
       </div>

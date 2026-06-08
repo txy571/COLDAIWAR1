@@ -23,3 +23,12 @@ export interface NewsItem {
   bias: NewsBias
   sourceRegion: string
 }
+
+export interface Newspaper {
+  id: string
+  year: number
+  headline: string
+  content: string
+  era: 'POST_WW2' | 'IRON_CURTAIN' | 'INFO_AGE'
+}
+

@@ -8,6 +8,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import type { NewsItem } from '@/types'
+import { audioManager } from '@/lib/audio'
+
 
 export function EventPopup() {
   const newsFeed = useGameStore(s => s.newsFeed)
@@ -46,7 +48,7 @@ export function EventPopup() {
           <span className="font-bold text-[10px] tracking-wider">
             {isCrisis ? '🔴 紧急通报' : isAction ? '📋 行动报告' : '📰 最新消息'}
           </span>
-          <button onClick={dismiss} className="text-white/50 hover:text-white/80 text-sm leading-none">✕</button>
+          <button onClick={() => { dismiss(); audioManager.playClick(); }} className="text-white/50 hover:text-white/80 text-sm leading-none">✕</button>
         </div>
         {/* Content */}
         <div className="p-3">

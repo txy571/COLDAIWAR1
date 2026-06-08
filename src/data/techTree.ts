@@ -440,4 +440,105 @@ export const INITIAL_TECH_TREE: TechNode[] = [
     prerequisites: ['globalization_theory', 'human_rights_discourse'], exclusiveTo: 'SHARED', category: 'SOCIOLOGY', branch: 'INDUSTRY',
     effects: [],
   }),
+
+  // ========================================================================
+  // ERA EXPANSIONS (2 nodes per era to reach 11 nodes per era)
+  // ========================================================================
+  // --- Era 0: ATOMIC ---
+  node({
+    id: 'active_sonar', name: '主动声纳技术', description: '先进主动潜艇探测声纳，保障海域反潜安全。',
+    era: 'ERA0_ATOMIC', yearRequirement: 1946, cost: 25,
+    prerequisites: [], exclusiveTo: 'SHARED', category: 'MILITARY', branch: 'ELECTRONICS',
+    effects: [{ target: 'military.navy', modifier: 'add', value: 8 }],
+  }),
+  node({
+    id: 'postwar_welfare', name: '战后福利国家构建', description: '奠定现代社会保障与全民医疗福利体制。',
+    era: 'ERA0_ATOMIC', yearRequirement: 1946, cost: 30,
+    prerequisites: [], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'INDUSTRY',
+    effects: [{ target: 'society.stability', modifier: 'add', value: 6 }],
+  }),
+
+  // --- Era 1: MISSILE ---
+  node({
+    id: 'dew_line', name: '远距离雷达警戒线', description: '北美及北极圈早期防空雷达网，严防战略轰炸机奇袭。',
+    era: 'ERA1_MISSILE', yearRequirement: 1957, cost: 45,
+    prerequisites: ['radar_network'], exclusiveTo: 'usa', category: 'MILITARY', branch: 'ELECTRONICS',
+    effects: [{ target: 'military.airforce', modifier: 'add', value: 10 }],
+  }),
+  node({
+    id: 'sputnik_tracking', name: '苏联卫星追踪站网', description: '建立第一代全球航天器轨道跟踪与控制中心。',
+    era: 'ERA1_MISSILE', yearRequirement: 1957, cost: 45,
+    prerequisites: ['radar_network'], exclusiveTo: 'ussr', category: 'MILITARY', branch: 'ELECTRONICS',
+    effects: [{ target: 'military.airforce', modifier: 'add', value: 10 }],
+  }),
+
+  // --- Era 2: SPACE ---
+  node({
+    id: 'early_abm', name: '早期反弹道导弹防御', description: '美苏研发的初代核弹头高空防御性拦截系统。',
+    era: 'ERA2_SPACE', yearRequirement: 1967, cost: 65,
+    prerequisites: ['h_bomb'], exclusiveTo: 'SHARED', category: 'MILITARY', branch: 'NUCLEAR',
+    effects: [{ target: 'military.nuclearArsenal', modifier: 'add', value: 5 }],
+  }),
+  node({
+    id: 'containerization', name: '集装箱海运标准', description: '全球海运集装箱化变革，实现物流成本断崖式下降。',
+    era: 'ERA2_SPACE', yearRequirement: 1966, cost: 40,
+    prerequisites: ['assembly_line'], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'INDUSTRY',
+    effects: [{ target: 'economy.gdp', modifier: 'add', value: 12 }],
+  }),
+
+  // --- Era 3: COMPUTER ---
+  node({
+    id: 'mainframe_banking', name: '大型机银行清算系统', description: '商业银行全面接入IBM等计算机，开启实时跨国结算。',
+    era: 'ERA3_COMPUTER', yearRequirement: 1973, cost: 50,
+    prerequisites: ['integrated_circuit'], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'COMPUTING',
+    effects: [{ target: 'economy.gdp', modifier: 'add', value: 15 }],
+  }),
+  node({
+    id: 'detente_diplomacy', name: '地缘战略缓和论', description: '美苏元首会晤，探索和平共处与裁军机制。',
+    era: 'ERA3_COMPUTER', yearRequirement: 1972, cost: 30,
+    prerequisites: ['un_framework'], exclusiveTo: 'SHARED', category: 'SOCIOLOGY', branch: 'INDUSTRY',
+    effects: [{ target: 'society.stability', modifier: 'add', value: 8 }],
+  }),
+
+  // --- Era 4: INFORMATION ---
+  node({
+    id: 'supercomputer_nuke', name: '超算核武器模拟', description: '利用超级计算机无需实际引爆即可优化弹头模型。',
+    era: 'ERA4_INFORMATION', yearRequirement: 1985, cost: 75,
+    prerequisites: ['microprocessor'], exclusiveTo: 'SHARED', category: 'MILITARY', branch: 'NUCLEAR',
+    effects: [{ target: 'military.nuclearArsenal', modifier: 'add', value: 15 }],
+  }),
+  node({
+    id: 'global_erp', name: '全球化资源企管软件', description: '计算机网络辅助供应链管理，大幅提高制造业运转效率。',
+    era: 'ERA4_INFORMATION', yearRequirement: 1988, cost: 45,
+    prerequisites: ['world_wide_web'], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'COMPUTING',
+    effects: [{ target: 'economy.industry', modifier: 'add', value: 15 }],
+  }),
+
+  // --- Era 5: POST_COLD ---
+  node({
+    id: 'jdam', name: 'JDAM精确制导炸弹', description: 'GPS与惯性导航结合的廉价全天候全自动航弹升级包。',
+    era: 'ERA5_POST_COLD', yearRequirement: 1997, cost: 55,
+    prerequisites: ['gps'], exclusiveTo: 'usa', category: 'MILITARY', branch: 'WEAPONS',
+    effects: [{ target: 'military.airforce', modifier: 'add', value: 18 }],
+  }),
+  node({
+    id: 'glonass', name: '格洛纳斯军用卫星导航', description: '苏联/俄罗斯的全球军用三维定位导弹制导星座网。',
+    era: 'ERA5_POST_COLD', yearRequirement: 1996, cost: 60,
+    prerequisites: ['gps'], exclusiveTo: 'ussr', category: 'MILITARY', branch: 'AEROSPACE',
+    effects: [{ target: 'military.airforce', modifier: 'add', value: 15 }],
+  }),
+
+  // --- Era 6: INTELLIGENCE ---
+  node({
+    id: 'cyber_defense_grid', name: '国家级网络安全防御阵线', description: '防范他国黑客入侵基础设施与保密局域网防御计划。',
+    era: 'ERA6_INTELLIGENCE', yearRequirement: 2010, cost: 60,
+    prerequisites: ['digital_sovereignty'], exclusiveTo: 'SHARED', category: 'MILITARY', branch: 'COMPUTING',
+    effects: [{ target: 'society.stability', modifier: 'add', value: 10 }],
+  }),
+  node({
+    id: 'clean_tech_rev', name: '新一代固态锂电池及清洁电网', description: '实现跨越式经济与能源安全的新新能源国家电网升级。',
+    era: 'ERA6_INTELLIGENCE', yearRequirement: 2015, cost: 70,
+    prerequisites: ['renewable_energy'], exclusiveTo: 'SHARED', category: 'CIVILIAN', branch: 'INDUSTRY',
+    effects: [{ target: 'economy.gdp', modifier: 'add', value: 20 }],
+  }),
 ]

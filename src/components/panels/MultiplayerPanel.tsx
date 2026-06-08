@@ -5,6 +5,7 @@
 'use client'
 
 import { useState } from 'react'
+import { audioManager } from '@/lib/audio'
 
 interface MultiplayerPanelProps {
   activeRoomId: string | null
@@ -39,6 +40,7 @@ export function MultiplayerPanel({
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault()
     if (chatText.trim()) {
+      audioManager.playClick()
       onSendChat(chatText.trim())
       setChatText('')
     }
@@ -47,7 +49,7 @@ export function MultiplayerPanel({
   return (
     <div className="border-t-2 border-stone-400/60 bg-stone-100/50">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open); audioManager.playClick(); }}
         className="w-full p-2 text-[9px] text-stone-500 hover:text-stone-700 font-mono tracking-wider flex items-center justify-center gap-1 transition-colors"
       >
         {open ? '▼' : '▶'} 🌐 联机对战模式
@@ -72,7 +74,7 @@ export function MultiplayerPanel({
                 <label className="block text-[8px] text-stone-400 uppercase font-mono mb-1">选择角色阵营</label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSide('usa')}
+                    onClick={() => { setSide('usa'); audioManager.playClick(); }}
                     className={`flex-1 py-1 text-[9px] border rounded-sm font-mono transition-colors ${
                       side === 'usa' ? 'bg-blue-800 text-white border-blue-800' : 'bg-stone-50 text-stone-600 border-stone-300'
                     }`}
@@ -80,7 +82,7 @@ export function MultiplayerPanel({
                     🇺🇸 美方
                   </button>
                   <button
-                    onClick={() => setSide('ussr')}
+                    onClick={() => { setSide('ussr'); audioManager.playClick(); }}
                     className={`flex-1 py-1 text-[9px] border rounded-sm font-mono transition-colors ${
                       side === 'ussr' ? 'bg-red-800 text-white border-red-800' : 'bg-stone-50 text-stone-600 border-stone-300'
                     }`}
@@ -88,7 +90,7 @@ export function MultiplayerPanel({
                     🇷🇺 苏方
                   </button>
                   <button
-                    onClick={() => setSide('observer')}
+                    onClick={() => { setSide('observer'); audioManager.playClick(); }}
                     className={`flex-1 py-1 text-[9px] border rounded-sm font-mono transition-colors ${
                       side === 'observer' ? 'bg-stone-700 text-white border-stone-700' : 'bg-stone-50 text-stone-600 border-stone-300'
                     }`}
@@ -99,7 +101,7 @@ export function MultiplayerPanel({
               </div>
 
               <button
-                onClick={handleJoin}
+                onClick={() => { handleJoin(); audioManager.playClick(); }}
                 className="w-full py-1.5 bg-stone-700 text-stone-50 hover:bg-stone-800 rounded-sm font-mono text-[9px] tracking-wide font-bold"
               >
                 连接房间 (支持本地 Mock 联机)
@@ -152,7 +154,7 @@ export function MultiplayerPanel({
               </form>
 
               <button
-                onClick={onLeaveRoom}
+                onClick={() => { onLeaveRoom(); audioManager.playClick(); }}
                 className="w-full py-1 bg-red-800/10 text-red-800 hover:bg-red-800/20 border border-red-800/25 rounded-sm font-mono text-[9px]"
               >
                 断开联机连接

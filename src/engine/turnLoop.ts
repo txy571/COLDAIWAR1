@@ -9,6 +9,7 @@
  */
 import type { GameStore } from '@/store/gameStore'
 import { checkEraTransition, getEraDisplayName } from './eraManager'
+import { ANNUAL_EVENTS } from '@/data/annualEvents'
 
 /**
  * AI Event phase: ONLY narrative and situation advancement.
@@ -18,12 +19,40 @@ export function executeAIPhase(state: GameStore): void {
   // Advance existing situations (stage progress only, no CWS changes)
   state.advanceSituations(state.turn, state.year)
 
+  // Activate predefined annual event if one exists for the current year
+  const annualEvent = ANNUAL_EVENTS[state.year]
+  if (annualEvent) {
+    const hasEvent = state.timeline.some(e => e.year === state.year && e.title === annualEvent.title)
+    if (!hasEvent) {
+      state.addTimelineEvent({
+        id: `annual_${state.year}`,
+        year: state.year,
+        turn: state.turn,
+        title: annualEvent.title,
+        description: annualEvent.description,
+        type: annualEvent.type,
+      })
+    }
+  }
+
   // Activate predefined historical situations by year (narrative only)
   const allSit = (state as any).allSituations as any[]
   const predefinedToActivate = [
     { id: 'berlin_blockade', year: 1948 },
     { id: 'korean_war', year: 1950 },
+    { id: 'hungarian_revolution', year: 1956 },
+    { id: 'suez_crisis', year: 1956 },
+    { id: 'sino_soviet_split', year: 1960 },
+    { id: 'berlin_wall_crisis', year: 1961 },
+    { id: 'cuban_missile_crisis', year: 1962 },
+    { id: 'vietnam_war', year: 1965 },
+    { id: 'prague_spring', year: 1968 },
+    { id: 'yom_kippur_war', year: 1973 },
+    { id: 'soviet_afghan_war', year: 1979 },
+    { id: 'iranian_revolution', year: 1979 },
+    { id: 'able_archer_83', year: 1983 },
     { id: 'german_reunification', year: 1989 },
+    { id: 'gulf_war', year: 1990 },
   ]
   for (const p of predefinedToActivate) {
     if (state.year >= p.year && !allSit.some((s: any) => s.id === p.id && s.isActive)) {

@@ -4,7 +4,7 @@
  *       计算CWS/影响力/预算/威望效果，提供基于CWS区间的随机事件发生表。
  */
 import type { GameStore } from '@/store/gameStore'
-import type { Country, PlayerAction, ActionCategory, Side } from '@/types'
+import type { Country, PlayerAction, ActionCategory, Side, Alignment, Buff } from '@/types'
 import { emit } from '@/lib/eventBus'
 
 const CATEGORY_KEYWORDS: Record<ActionCategory, string[]> = {
@@ -79,6 +79,9 @@ export interface ActionResult {
     victoryScoreChange: number
     globalTensionChange: number
   }
+  countryStatsChanges?: Record<string, Record<string, number>>
+  alignmentChanges?: Record<string, Alignment>
+  newBuffs?: Buff[]
   newEvent?: {
     id: string
     name: string
@@ -267,6 +270,72 @@ export function applyActionResult(state: GameStore, side: Side, result: ActionRe
     state.modifyGlobalTension(effects.globalTensionChange)
   }
 
+  // Apply direct country stats modifications
+  if (result.countryStatsChanges) {
+    for (const [countryId, changes] of Object.entries(result.countryStatsChanges)) {
+      const country = state.countries[countryId]
+      if (country) {
+        const updatedEconomy = { ...country.economy }
+        const updatedMilitary = { ...country.military }
+        const updatedSociety = { ...country.society }
+        let hasChanges = false
+
+        for (const [statPath, delta] of Object.entries(changes)) {
+          const parts = statPath.split('.')
+          if (parts.length === 2) {
+            const category = parts[0] as 'military' | 'economy' | 'society'
+            const key = parts[1]
+            
+            if (category === 'economy' && key in updatedEconomy) {
+              const currentVal = (updatedEconomy as any)[key]
+              if (typeof currentVal === 'number') {
+                (updatedEconomy as any)[key] = Math.max(0, Math.min(100, currentVal + delta))
+                hasChanges = true
+              }
+            } else if (category === 'military' && key in updatedMilitary) {
+              const currentVal = (updatedMilitary as any)[key]
+              if (typeof currentVal === 'number') {
+                (updatedMilitary as any)[key] = Math.max(0, Math.min(100, currentVal + delta))
+                hasChanges = true
+              }
+            } else if (category === 'society' && key in updatedSociety) {
+              const currentVal = (updatedSociety as any)[key]
+              if (typeof currentVal === 'number') {
+                const maxVal = key === 'population' ? 2000 : 100
+                (updatedSociety as any)[key] = Math.max(0, Math.min(maxVal, currentVal + delta))
+                hasChanges = true
+              }
+            }
+          } else if (parts.length === 1 && parts[0] === 'coldWarScore') {
+            state.modifyColdWarScore(countryId, delta)
+          }
+        }
+
+        if (hasChanges) {
+          state.updateCountry(countryId, {
+            economy: updatedEconomy,
+            military: updatedMilitary,
+            society: updatedSociety,
+          })
+        }
+      }
+    }
+  }
+
+  // Apply direct alignment shifts
+  if (result.alignmentChanges) {
+    for (const [countryId, newAlignment] of Object.entries(result.alignmentChanges)) {
+      state.setAlignment(countryId, newAlignment)
+    }
+  }
+
+  // Apply new active buffs
+  if (result.newBuffs && Array.isArray(result.newBuffs)) {
+    for (const buff of result.newBuffs) {
+      state.addBuff(buff)
+    }
+  }
+
   // Create AI Dynamic Event
   if (result.newEvent) {
     const newSit = result.newEvent
@@ -326,6 +395,9 @@ export async function resolvePendingActions(state: GameStore, side: Side): Promi
               victoryScoreChange: data.result.effects?.victoryScoreChange || 0,
               globalTensionChange: data.result.effects?.globalTensionChange || 0,
             },
+            countryStatsChanges: data.result.countryStatsChanges || {},
+            alignmentChanges: data.result.alignmentChanges || {},
+            newBuffs: data.result.newBuffs || [],
             newEvent: data.result.newEvent,
             newsHeadlines: data.result.newsHeadlines || []
           }

@@ -16,6 +16,42 @@ interface LabelsProps {
   era?: string
 }
 
+const COUNTRY_SIZE_TIERS: Record<string, number> = {
+  // Tier 1: Giants (10-12px)
+  usa: 12,
+  ussr: 12,
+  china: 11,
+  canada: 11,
+  brazil: 10,
+  australia: 10,
+  india: 10,
+  
+  // Tier 2: Medium (8.5-9px)
+  uk: 9,
+  france: 9,
+  italy: 8.5,
+  japan: 8.5,
+  spain: 8.5,
+  poland: 8.5,
+  saudi_arabia: 9,
+  egypt: 9,
+  vietnam: 8.5,
+  turkey: 8.5,
+  iran: 9,
+  argentina: 9,
+  mexico: 9,
+  south_africa: 9,
+  indonesia: 9,
+
+  // Tier 3: Critical hotspots (8px)
+  west_germany: 8,
+  east_germany: 8,
+  south_korea: 7.5,
+  north_korea: 7.5,
+  cuba: 7.5,
+  israel: 7.5,
+}
+
 export function Labels({ features, projection, era }: LabelsProps) {
   const pathGen = useMemo(() => geoPath().projection(projection), [projection])
 
@@ -52,12 +88,15 @@ export function Labels({ features, projection, era }: LabelsProps) {
   return (
     <g className="country-labels">
       {labelData.map(d => {
-        // Font size: sqrt of normalized area, mapped to 5-12px range
-        const normalizedArea = Math.sqrt(d.area / maxArea)
-        const fontSize = 5 + normalizedArea * 7
+        // Resolve font size: check lookup table first, fallback to D3 area normalization
+        let fontSize = COUNTRY_SIZE_TIERS[d.id]
+        if (!fontSize) {
+          const normalizedArea = Math.sqrt(d.area / maxArea)
+          fontSize = 5 + normalizedArea * 7
+        }
 
         // Hide labels for extremely tiny countries (rendered area too small)
-        if (fontSize < 6) return null
+        if (fontSize < 5.5) return null
 
         // For very small countries, show abbreviated name
         const label = fontSize < 7 ? d.name.substring(0, Math.max(3, Math.floor(fontSize))) : d.name

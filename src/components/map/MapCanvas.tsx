@@ -10,6 +10,7 @@
  *       TODO: 高CWS脉冲光点动画未实现
  */
 import { useMemo, useCallback, useRef } from 'react'
+import { audioManager } from '@/lib/audio'
 import { useGameStore } from '@/store/gameStore'
 import { useProjection } from './hooks/useProjection'
 import { useMapInteraction } from './hooks/useMapInteraction'
@@ -64,9 +65,14 @@ export function MapCanvas({ width, height }: MapCanvasProps) {
 
   const { projection, pathGenerator } = useProjection(width, height, geoFeatures)
   const { hoveredCountryId, tooltip, handleCountryHover, handleCountryLeave, handleMouseMove } = useMapInteraction()
-  useMapZoom(svgRef)
+  useMapZoom(svgRef, projection.scale(), width)
+
+  const mapWidth = useMemo(() => {
+    return projection.scale() * 2 * Math.PI
+  }, [projection])
 
   const handleCountryClick = useCallback((countryId: string) => {
+    audioManager.playClick()
     setSelectedCountryId(countryId === selectedCountryId ? null : countryId)
   }, [selectedCountryId, setSelectedCountryId])
 
@@ -137,98 +143,106 @@ export function MapCanvas({ width, height }: MapCanvasProps) {
         {/* Layers 0-1: Background + decor */}
         <EraFilters era={currentEra} />
         <EraPatterns />
-        {currentEra === 'IRON_CURTAIN' ? (
-          <CrtOverlay width={width} height={height} pathGenerator={pathGenerator} />
-        ) : currentEra === 'INFO_AGE' ? (
-          <CyberOverlay width={width} height={height} />
-        ) : (
-          <Ocean width={width} height={height} onClick={() => setSelectedCountryId(null)} />
-        )}
 
-        {/* Cyberpunk holographic Data Beams in Era III */}
-        {currentEra === 'INFO_AGE' && (
-          <DataBeams projection={projection} countries={countries} />
-        )}
+        {/* Base map content definition */}
+        <g id="map-base-content">
+          {currentEra === 'IRON_CURTAIN' ? (
+            <CrtOverlay width={width} height={height} pathGenerator={pathGenerator} />
+          ) : currentEra === 'INFO_AGE' ? (
+            <CyberOverlay width={width} height={height} />
+          ) : (
+            <Ocean width={width} height={height} onClick={() => setSelectedCountryId(null)} />
+          )}
 
-        {/* Layer 2: Country polygons with territory overrides */}
-        <g className="countries-layer">
-          {geoFeatures.map(f => {
-            const props = f.properties as any
-            const fid = props.id as string
-            const country = countries[fid]
-            if (!country) return null
+          {/* Cyberpunk holographic Data Beams in Era III */}
+          {currentEra === 'INFO_AGE' && (
+            <DataBeams projection={projection} countries={countries} />
+          )}
 
-            const tInfo = territoryInfo[fid]
-            if (!tInfo) return null
+          {/* Layer 2: Country polygons with territory overrides */}
+          <g className="countries-layer">
+            {geoFeatures.map(f => {
+              const props = f.properties as any
+              const fid = props.id as string
+              const country = countries[fid]
+              if (!country) return null
 
-            const ownerCountry = tInfo.isTransferred
-              ? countries[tInfo.effectiveOwnerId]
-              : country
+              const tInfo = territoryInfo[fid]
+              if (!tInfo) return null
 
-            if (!ownerCountry) return null
-            const isEastGermany = fid === 'east_germany'
+              const ownerCountry = tInfo.isTransferred
+                ? countries[tInfo.effectiveOwnerId]
+                : country
 
-            return (
-              <CountryShape
-                key={fid}
-                country={ownerCountry}
-                path={countryPaths[fid] || ''}
-                isSelected={selectedCountryId === fid || selectedCountryId === tInfo.effectiveOwnerId}
-                isHovered={hoveredCountryId === fid}
-                isEastGermany={isEastGermany}
-                era={currentEra}
-                isTransferred={tInfo.isTransferred}
-                originalOwnerAlignment={tInfo.originalOwnerAlignment}
-                isContested={tInfo.isContested}
-                hasLostHomeTerritory={tInfo.hasLostHomeTerritory}
-                onClick={() => handleCountryClick(fid)}
-                onMouseEnter={(e) => {
-                  const displayName = tInfo.isTransferred
-                    ? `${ownerCountry.name} (${tInfo.originalOwnerName})`
-                    : country.name
-                  handleCountryHover(
-                    fid,
-                    displayName,
-                    ownerCountry.coldWarScore,
-                    ownerCountry.alignment,
-                    e
-                  )
-                }}
-                onMouseLeave={handleCountryLeave}
-              />
-            )
-          })}
+              if (!ownerCountry) return null
+              const isEastGermany = fid === 'east_germany'
+
+              return (
+                <CountryShape
+                  key={fid}
+                  country={ownerCountry}
+                  path={countryPaths[fid] || ''}
+                  isSelected={selectedCountryId === fid || selectedCountryId === tInfo.effectiveOwnerId}
+                  isHovered={hoveredCountryId === fid}
+                  isEastGermany={isEastGermany}
+                  era={currentEra}
+                  isTransferred={tInfo.isTransferred}
+                  originalOwnerAlignment={tInfo.originalOwnerAlignment}
+                  isContested={tInfo.isContested}
+                  hasLostHomeTerritory={tInfo.hasLostHomeTerritory}
+                  onClick={() => handleCountryClick(fid)}
+                  onMouseEnter={(e) => {
+                    const displayName = tInfo.isTransferred
+                      ? `${ownerCountry.name} (${tInfo.originalOwnerName})`
+                      : country.name
+                    handleCountryHover(
+                      fid,
+                      displayName,
+                      ownerCountry.coldWarScore,
+                      ownerCountry.alignment,
+                      e
+                    )
+                  }}
+                  onMouseLeave={handleCountryLeave}
+                />
+              )
+            })}
+          </g>
+
+          {/* Layer 3: Era I blood stains */}
+          {currentEra === 'POST_WW2' && (
+            <BloodStains countries={countries} features={geoFeatures} />
+          )}
+
+          {/* High CWS pulsating points */}
+          <g className="tension-pulses" pointerEvents="none">
+            {geoFeatures.map(f => {
+              const fid = (f.properties as any)?.id as string
+              const country = countries[fid]
+              if (!country || country.coldWarScore <= 75) return null
+              const centroid = pathGenerator.centroid(f as any)
+              if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null
+              const [cx, cy] = centroid
+              return (
+                <g key={`pulse_${fid}`}>
+                  <circle cx={cx} cy={cy} r={5} fill={country.coldWarScore > 85 ? '#ff0055' : '#ff9900'} opacity={0.8} />
+                  <circle cx={cx} cy={cy} r={5} fill="none" stroke={country.coldWarScore > 85 ? '#ff0055' : '#ff9900'} strokeWidth={1} opacity={0.6}>
+                    <animate attributeName="r" values="5;18;5" dur="1.8s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.8;0;0.8" dur="1.8s" repeatCount="indefinite" />
+                  </circle>
+                </g>
+              )
+            })}
+          </g>
+
+          {/* Layer 4: Labels + Divided borders */}
+          <DividedBorders features={geoFeatures} projection={projection} />
+          <Labels features={geoFeatures} projection={projection} era={currentEra} />
         </g>
 
-        {/* Layer 3: Era I blood stains */}
-        {currentEra === 'POST_WW2' && (
-          <BloodStains countries={countries} features={geoFeatures} />
-        )}
-
-        {/* High CWS pulsating points */}
-        <g className="tension-pulses" pointerEvents="none">
-          {geoFeatures.map(f => {
-            const fid = (f.properties as any)?.id as string
-            const country = countries[fid]
-            if (!country || country.coldWarScore <= 75) return null
-            const centroid = pathGenerator.centroid(f as any)
-            if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null
-            const [cx, cy] = centroid
-            return (
-              <g key={`pulse_${fid}`}>
-                <circle cx={cx} cy={cy} r={5} fill={country.coldWarScore > 85 ? '#ff0055' : '#ff9900'} opacity={0.8} />
-                <circle cx={cx} cy={cy} r={5} fill="none" stroke={country.coldWarScore > 85 ? '#ff0055' : '#ff9900'} strokeWidth={1} opacity={0.6}>
-                  <animate attributeName="r" values="5;18;5" dur="1.8s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.8;0;0.8" dur="1.8s" repeatCount="indefinite" />
-                </circle>
-              </g>
-            )
-          })}
-        </g>
-
-        {/* Layer 4: Labels + Divided borders */}
-        <DividedBorders features={geoFeatures} projection={projection} />
-        <Labels features={geoFeatures} projection={projection} era={currentEra} />
+        {/* Duplicate copies for infinite wrapping */}
+        <use href="#map-base-content" x={-mapWidth} />
+        <use href="#map-base-content" x={mapWidth} />
 
         {/* Layer 5: Interaction layer */}
         <MapInteraction tooltip={tooltip} />
