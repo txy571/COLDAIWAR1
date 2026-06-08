@@ -25,6 +25,7 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   const [log, setLog] = useState<string[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [useMock, setUseMock] = useState(false)
+  const [preferredSide, setPreferredSide] = useState<'usa' | 'ussr'>('usa') // NEW
   const managerRef = useRef<MultiplayerManager | null>(null)
 
   // Refs to avoid stale closures in WebSocket callbacks
@@ -32,6 +33,8 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   roomIdRef.current = roomId
   const onGameStartRef = useRef(onGameStart)
   onGameStartRef.current = onGameStart
+  const mySideRef = useRef(mySide)
+  mySideRef.current = mySide
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg])
 
@@ -60,8 +63,8 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
           useGameStore.getState().loadGameState(ev.gameState)
           addLog(`[系统] 已从服务器同步房间历史局势数据！`)
         }
-        // If room is already full when we join, start immediately
-        if (ev.activePlayers && ev.activePlayers.length >= 2) {
+        const both: boolean = !!(ev.activePlayers && ev.activePlayers.length >= 2)
+        if (both) {
           addLog(`[系统] 已连接至房间，对手已就位！`)
           addLog('[系统] ⚡ 进入游戏！')
           startGame(ev.side as 'usa' | 'ussr')
@@ -74,6 +77,12 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
         addLog('[系统] ⚡ 对手已就位，进入游戏！')
         const mySideAfterJoin: 'usa' | 'ussr' = ev.side === 'usa' ? 'ussr' : 'usa'
         startGame(mySideAfterJoin)
+        break
+      case 'PLAYERS_CHANGED':
+        if (ev.activePlayers && ev.activePlayers.length >= 2) {
+          addLog(`[系统] 检测到双方已就位，进入游戏！`)
+          startGame(mySideRef.current || 'usa')
+        }
         break
       case 'CONNECTION_ERROR':
         setErrorMsg(ev.message)
@@ -103,17 +112,18 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
     audioManager.playClick()
     const id = generateRoomId()
     setRoomId(id)
+    setMySide(preferredSide)
     setPhase('connecting')
     setLog([])
     setErrorMsg(null)
-    addLog(`[系统] 正在创建房间 ${id}...`)
+    addLog(`[系统] 正在创建房间 ${id}（${preferredSide === 'usa' ? '🇺🇸 美国' : '🇷🇺 苏联'}）...`)
 
     const mgr = new MultiplayerManager(
       id,
-      'usa',
+      preferredSide,
       handleLobbyEvent,
-      useMock,   // useOfflineMock based on user toggle
-      true     // noMockFallback = true → don't silently fallback
+      useMock,
+      true
     )
     managerRef.current = mgr
   }
@@ -121,19 +131,21 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   const handleJoinRoom = () => {
     if (!roomIdInput.trim()) return
     audioManager.playClick()
+    const opponentSide: 'usa' | 'ussr' = preferredSide === 'usa' ? 'ussr' : 'usa'
     const id = roomIdInput.trim().toUpperCase()
     setRoomId(id)
+    setMySide(opponentSide)
     setPhase('connecting')
     setLog([])
     setErrorMsg(null)
-    addLog(`[系统] 正在连接房间 ${id}...`)
+    addLog(`[系统] 正在连接房间 ${id}（${opponentSide === 'usa' ? '🇺🇸 美国' : '🇷🇺 苏联'}）...`)
 
     const mgr = new MultiplayerManager(
       id,
-      'ussr',
+      opponentSide,
       handleLobbyEvent,
-      useMock,   // useOfflineMock based on user toggle
-      true     // no fallback
+      useMock,
+      true
     )
     managerRef.current = mgr
   }
@@ -183,11 +195,27 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
                 </div>
               </div>
 
+              {/* Side Selector */}
+              <div className="flex bg-stone-200/60 rounded-sm overflow-hidden border border-stone-400/60">
+                <button
+                  className={`flex-1 py-2 text-xs font-bold font-mono tracking-wider transition-colors ${
+                    preferredSide === 'usa' ? 'bg-blue-900/20 text-blue-700 border-r border-stone-400/60 shadow-inner' : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                  onClick={() => { setPreferredSide('usa'); audioManager.playClick(); }}
+                >🇺🇸 美国</button>
+                <button
+                  className={`flex-1 py-2 text-xs font-bold font-mono tracking-wider transition-colors ${
+                    preferredSide === 'ussr' ? 'bg-red-900/20 text-red-700 shadow-inner' : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                  onClick={() => { setPreferredSide('ussr'); audioManager.playClick(); }}
+                >🇷🇺 苏联</button>
+              </div>
+
               <button
                 onClick={handleCreateRoom}
                 className="w-full py-3.5 bg-stone-700 hover:bg-stone-800 text-stone-100 font-bold tracking-wider text-sm rounded-sm transition-all active:scale-[0.98]"
               >
-                🎮 创建房间
+                🎮 创建房间（{preferredSide === 'usa' ? '🇺🇸 美国' : '🇷🇺 苏联'}）
               </button>
 
               <div className="relative">
