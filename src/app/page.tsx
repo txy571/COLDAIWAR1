@@ -55,7 +55,7 @@ export default function Home() {
   const ussr = useGameStore(s => s.players.ussr)
   const [victory, setVictory] = useState<VictoryResult | null>(null)
   const [view, setView] = useState<'lobby' | 'game'>('lobby')
-  const [faction, setFaction] = useState<'usa' | 'ussr' | null>(null)
+  const [faction, setFaction] = useState<'usa' | 'ussr' | 'observer' | null>(null)
   const [mpRoomId, setMpRoomId] = useState<string | null>(null)
   const [roomActivePlayers, setRoomActivePlayers] = useState<string[]>([])
   const resetGame = useGameStore(s => s.resetGame)
@@ -191,15 +191,17 @@ export default function Home() {
   const [mpMessages, setMpMessages] = useState<string[]>([])
   const [onlineTimer, setOnlineTimer] = useState<number | null>(null)
 
-  const handleLobbyGameStart = (roomId: string, side: 'usa' | 'ussr', manager: MultiplayerManager) => {
+  const handleLobbyGameStart = (roomId: string, side: 'usa' | 'ussr' | 'observer', manager: MultiplayerManager) => {
     setMpRoomId(roomId)
     setFaction(side)
-    setMpMessages([`[系统] 已连接到房间 ${roomId}，阵营：${side.toUpperCase()}`])
+    setMpMessages([`[系统] 已连接到房间 ${roomId}，角色：${side === 'usa' ? '美方' : side === 'ussr' ? '苏方' : '观察者'}`])
     setView('game')
 
     // Store globally for in-game access
     ;(window as any).mpManager = manager
-    manager.startTimer(side)
+    if (side === 'usa' || side === 'ussr') {
+      manager.startTimer(side)
+    }
 
     // Swap to in-game event handler
     manager.setEventCallback((ev) => {
@@ -216,7 +218,7 @@ export default function Home() {
           break
         case 'ACTION_SUBMITTED':
           if (ev.side !== side) {
-            store.addPlayerAction(ev.side, ev.action)
+            store.addPlayerAction(ev.side as any, ev.action)
             setMpMessages((prev) => [...prev, `[系统] 对手 ${ev.side.toUpperCase()} 已提交指令！`])
           }
           break
@@ -236,6 +238,18 @@ export default function Home() {
           break
       }
     })
+  }
+
+  const handleInGameJoinRoom = (roomId: string, side: 'usa' | 'ussr' | 'observer') => {
+    audioManager.playClick()
+    const mgr = new MultiplayerManager(
+      roomId,
+      side,
+      () => {},
+      false, // useMock
+      true   // noMockFallback
+    )
+    handleLobbyGameStart(roomId, side, mgr)
   }
 
   const handleSendChat = (text: string) => {
@@ -672,7 +686,7 @@ export default function Home() {
               onlineTimer={onlineTimer}
               mpMessages={mpMessages}
               mpRole={faction}
-              onJoinRoom={(rid, sd) => handleLobbyGameStart(rid, sd as 'usa' | 'ussr', (window as any).mpManager)}
+              onJoinRoom={handleInGameJoinRoom}
               onLeaveRoom={handleLeaveRoom}
               onSendChat={handleSendChat}
             />

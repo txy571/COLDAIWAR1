@@ -31,7 +31,25 @@ export class GameRoom {
       return new Response('Not found', { status: 404 })
     }
 
-    const side = (url.searchParams.get('side') || 'observer') as 'usa' | 'ussr' | 'observer'
+    // Cleanup dead/closing connections first to prevent memory leaks and ensure accurate side resolution
+    this.clients = this.clients.filter(c => c.ws.readyState === 1 || c.ws.readyState === 0)
+
+    let side = (url.searchParams.get('side') || 'observer') as 'usa' | 'ussr' | 'observer'
+
+    // Resolve side conflicts: if requested side is occupied by an active OPEN connection, assign opposite side (if free)
+    if (side === 'usa' || side === 'ussr') {
+      const isOccupied = this.clients.some(c => c.side === side && c.ws.readyState === 1)
+      if (isOccupied) {
+        const oppositeSide = side === 'usa' ? 'ussr' : 'usa'
+        const isOppositeOccupied = this.clients.some(c => c.side === oppositeSide && c.ws.readyState === 1)
+        if (!isOppositeOccupied) {
+          side = oppositeSide
+        } else {
+          side = 'observer'
+        }
+      }
+    }
+
     const clientId = crypto.randomUUID()
 
     // Verify WebSocket upgrade
