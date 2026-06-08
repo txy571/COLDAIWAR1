@@ -20,7 +20,7 @@ import { DoomsdayClock } from '@/components/panels/DoomsdayClock'
 import { ApiSettings } from '@/components/panels/ApiSettings'
 import { EventPopup } from '@/components/panels/EventPopup'
 import { ResolutionResults } from '@/components/panels/ResolutionResults'
-import { FactionSelect } from '@/components/panels/FactionSelect'
+import { MultiplayerLobby } from '@/components/panels/MultiplayerLobby'
 import { NewsTicker } from '@/components/panels/NewsTicker'
 import { BorderChanges } from '@/components/panels/BorderChanges'
 import { selectCwsRanking, selectFlashpoints } from '@/store/selectors'
@@ -54,7 +54,9 @@ export default function Home() {
   const usa = useGameStore(s => s.players.usa)
   const ussr = useGameStore(s => s.players.ussr)
   const [victory, setVictory] = useState<VictoryResult | null>(null)
+  const [view, setView] = useState<'lobby' | 'game'>('lobby')
   const [faction, setFaction] = useState<'usa' | 'ussr' | null>(null)
+  const [mpRoomId, setMpRoomId] = useState<string | null>(null)
   const resetGame = useGameStore(s => s.resetGame)
 
   // --- Left Sidebar Tab ---
@@ -184,74 +186,47 @@ export default function Home() {
     URL.revokeObjectURL(url)
   }
 
-  // --- Multiplayer states ---
-  const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
-  const [onlineTimer, setOnlineTimer] = useState<number | null>(null)
+  // --- Lobby → Game transition ---
   const [mpMessages, setMpMessages] = useState<string[]>([])
-  const [mpRole, setMpRole] = useState<'usa' | 'ussr' | 'observer' | null>(null)
+  const [onlineTimer, setOnlineTimer] = useState<number | null>(null)
 
-  const handleJoinRoom = (roomId: string, side: 'usa' | 'ussr' | 'observer') => {
-    if (typeof window === 'undefined') return
-    if ((window as any).mpManager) {
-      (window as any).mpManager.disconnect()
-    }
+  const handleLobbyGameStart = (roomId: string, side: 'usa' | 'ussr', manager: MultiplayerManager) => {
+    setMpRoomId(roomId)
+    setFaction(side)
+    setMpMessages([`[系统] 已连接到房间 ${roomId}，阵营：${side.toUpperCase()}`])
+    setView('game')
 
-    const manager = new MultiplayerManager(
-      roomId,
-      side,
-      (ev) => {
-        switch (ev.type) {
-          case 'INIT':
-            setActiveRoomId(roomId)
-            setMpRole(ev.side)
-            setOnlineTimer(ev.timer)
-            if (ev.side === 'usa' || ev.side === 'ussr') {
-              setFaction(ev.side)
-            }
-            setMpMessages((prev) => [...prev, `[系统] 已成功连接到房间 ${roomId}，角色为：${ev.side.toUpperCase()}`])
-            break
-          case 'PLAYER_JOINED':
-            setMpMessages((prev) => [...prev, ev.message])
-            break
-          case 'PLAYER_LEFT':
-            setMpMessages((prev) => [...prev, ev.message])
-            break
-          case 'CHAT_MSG':
-            setMpMessages((prev) => [...prev, `${ev.side.toUpperCase()}: ${ev.text}`])
-            break
-          case 'TIMER_TICK':
-            setOnlineTimer(ev.seconds)
-            break
-          case 'ACTION_SUBMITTED':
-            if (ev.side !== side) {
-              store.addPlayerAction(ev.side, ev.action)
-              setMpMessages((prev) => [...prev, `[系统] 对手 ${ev.side.toUpperCase()} 已提交指令！`])
-            }
-            break
-          case 'TIMER_TIMEOUT':
-            setMpMessages((prev) => [...prev, `[系统] 回合超时！自动结算。`])
-            handleAdvancePhase()
-            break
-          case 'GAME_STATE_SYNC':
-            break
-        }
-      },
-      true // Offline mock sync mode
-    )
-
-    manager.startTimer(side === 'observer' ? 'none' : side)
+    // Store globally for in-game access
     ;(window as any).mpManager = manager
-  }
+    manager.startTimer(side)
 
-  const handleLeaveRoom = () => {
-    if (typeof window !== 'undefined' && (window as any).mpManager) {
-      (window as any).mpManager.disconnect()
-      ;(window as any).mpManager = null
-    }
-    setActiveRoomId(null)
-    setOnlineTimer(null)
-    setMpRole(null)
-    setMpMessages([])
+    // Swap to in-game event handler
+    manager.setEventCallback((ev) => {
+      switch (ev.type) {
+        case 'TIMER_TICK':
+          setOnlineTimer(ev.seconds)
+          break
+        case 'TIMER_TIMEOUT':
+          setMpMessages((prev) => [...prev, `[系统] 回合超时！自动结算。`])
+          handleAdvancePhase()
+          break
+        case 'CHAT_MSG':
+          setMpMessages((prev) => [...prev, `${ev.side.toUpperCase()}: ${ev.text}`])
+          break
+        case 'ACTION_SUBMITTED':
+          if (ev.side !== side) {
+            store.addPlayerAction(ev.side, ev.action)
+            setMpMessages((prev) => [...prev, `[系统] 对手 ${ev.side.toUpperCase()} 已提交指令！`])
+          }
+          break
+        case 'PLAYER_LEFT':
+          setMpMessages((prev) => [...prev, ev.message])
+          break
+        case 'PLAYER_JOINED':
+          setMpMessages((prev) => [...prev, ev.message])
+          break
+      }
+    })
   }
 
   const handleSendChat = (text: string) => {
@@ -306,9 +281,9 @@ export default function Home() {
     phase === 'USSR_ACTION' ? '⏭ 结束苏方行动（→结算）' :
     phase === 'RESOLVE' ? '▶ 推进到下一轮' : '▶ 推进'
 
-  // Show faction selection before entering game
-  if (!faction) {
-    return <FactionSelect onSelect={setFaction} />
+  // Gate: must go through lobby before entering game
+  if (view === 'lobby') {
+    return <MultiplayerLobby onGameStart={handleLobbyGameStart} />
   }
 
   return (
@@ -390,7 +365,18 @@ export default function Home() {
                 (phase === 'USSR_ACTION' && faction !== 'ussr')
                   ? 'bg-stone-700/30 text-stone-600 cursor-not-allowed border border-stone-700/30'
                   : 'brass-button text-stone-900'
-                   <aside className={`fixed lg:relative top-0 bottom-0 left-0 z-30 lg:z-10 w-72 sm:w-80 bg-[var(--bg-sidebar)] border-r-2 border-[var(--border-main)] flex flex-col shrink-0 overflow-y-auto transition-transform duration-300 ${showLeftSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+              }`}
+            >
+              {advanceLabel}
+            </button>
+          </div>
+        </header>
+
+        {/* ═══ 主体内容 ═══ */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* ─── 左侧面板 ─── */}
+          <aside className={`fixed lg:relative top-0 bottom-0 left-0 z-30 lg:z-10 w-72 sm:w-80 bg-[var(--bg-sidebar)] border-r-2 border-[var(--border-main)] flex flex-col shrink-0 overflow-y-auto transition-transform duration-300 ${showLeftSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
             {/* Tabs Toggle */}
             <div className="flex bg-stone-700/10 border-b border-[var(--border-main)]/40 text-center text-[10px] font-bold font-mono tracking-wider">
               <button
@@ -549,26 +535,6 @@ export default function Home() {
                 )}
               </div>
             )}
-          </aside>>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 热点警报 */}
-            {flashpoints.length > 0 && (
-              <div className="p-4 sm:p-5 mt-auto border-t-2 border-red-700/30 bg-red-900/5">
-                <h2 className="text-[10px] font-bold text-red-700 uppercase tracking-[0.2em] mb-2">⚠ 热点警报</h2>
-                {flashpoints.map(f => (
-                  <p key={f.id} className="text-[10px] text-red-800 font-medium">
-                    {f.name} · 冷战分 {f.coldWarScore}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {/* 边界变更面板 */}
-            <BorderChanges />
           </aside>
 
           {/* ─── 中央：地图 ─── */}
@@ -631,12 +597,12 @@ export default function Home() {
               <TechTreePanel />
             </div>
             <MultiplayerPanel
-              activeRoomId={activeRoomId}
+              activeRoomId={mpRoomId}
               onlineTimer={onlineTimer}
               mpMessages={mpMessages}
-              mpRole={mpRole}
-              onJoinRoom={handleJoinRoom}
-              onLeaveRoom={handleLeaveRoom}
+              mpRole={faction}
+              onJoinRoom={() => {}}
+              onLeaveRoom={() => {}}
               onSendChat={handleSendChat}
             />
             <ApiSettings />

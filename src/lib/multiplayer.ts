@@ -15,12 +15,14 @@ export type MultiplayerEvent =
   | { type: 'TIMER_TICK'; seconds: number }
   | { type: 'TIMER_TIMEOUT'; side: 'usa' | 'ussr' | 'none' }
   | { type: 'CHAT_MSG'; side: string; text: string }
+  | { type: 'CONNECTION_ERROR'; message: string }
 
 export class MultiplayerManager {
   private socket: WebSocket | null = null
   private roomId: string
   private side: 'usa' | 'ussr' | 'observer'
   private isOfflineMock = false
+  private noMockFallback = false
   private timerInterval: any = null
   private secondsLeft = 60
   private onEventCallback: (ev: MultiplayerEvent) => void
@@ -29,12 +31,14 @@ export class MultiplayerManager {
     roomId: string,
     side: 'usa' | 'ussr' | 'observer',
     onEvent: (ev: MultiplayerEvent) => void,
-    useOfflineMock = false
+    useOfflineMock = false,
+    noMockFallback = false
   ) {
     this.roomId = roomId
     this.side = side
     this.onEventCallback = onEvent
     this.isOfflineMock = useOfflineMock
+    this.noMockFallback = noMockFallback
 
     if (useOfflineMock) {
       this.initMockMode()
@@ -63,8 +67,12 @@ export class MultiplayerManager {
         }
       }
 
-      this.socket.onerror = (err) => {
-        console.warn('Socket error, falling back to offline mock mode:', err)
+      this.socket.onerror = () => {
+        if (this.noMockFallback) {
+          this.onEventCallback({ type: 'CONNECTION_ERROR', message: '无法连接到联机服务器，请检查网络后重试' })
+          return
+        }
+        console.warn('Socket error, falling back to offline mock mode')
         this.isOfflineMock = true
         this.initMockMode()
       }
@@ -76,7 +84,11 @@ export class MultiplayerManager {
         }
       }
     } catch (err) {
-      console.warn('Connection failed, entering offline mock mode:', err)
+      if (this.noMockFallback) {
+        this.onEventCallback({ type: 'CONNECTION_ERROR', message: '无法连接到联机服务器，请检查网络后重试' })
+        return
+      }
+      console.warn('Connection failed, entering offline mock mode')
       this.isOfflineMock = true
       this.initMockMode()
     }
@@ -188,6 +200,11 @@ export class MultiplayerManager {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(data))
     }
+  }
+
+  /** Replace the event callback at runtime (used after lobby → game transition) */
+  public setEventCallback(callback: (ev: MultiplayerEvent) => void) {
+    this.onEventCallback = callback
   }
 
   public disconnect() {

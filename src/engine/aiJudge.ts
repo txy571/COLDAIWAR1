@@ -299,11 +299,11 @@ export function applyActionResult(state: GameStore, side: Side, result: ActionRe
                 (updatedMilitary as any)[key] = Math.max(0, Math.min(100, currentVal + delta))
                 hasChanges = true
               }
-            } else if (category === 'society' && key in updatedSociety) {
-              const currentVal = (updatedSociety as any)[key]
-              if (typeof currentVal === 'number') {
-                const maxVal = key === 'population' ? 2000 : 100
-                (updatedSociety as any)[key] = Math.max(0, Math.min(maxVal, currentVal + delta))
+            } else if (category === 'society') {
+              const raw = (updatedSociety as any)[key]
+              if (typeof raw === 'number') {
+                const clampMax: number = key === 'population' ? 2000 : 100
+                ;(updatedSociety as any)[key] = Math.max(0, Math.min(clampMax, raw + delta))
                 hasChanges = true
               }
             }

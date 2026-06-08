@@ -30,7 +30,7 @@ export function executeAIPhase(state: GameStore): void {
         turn: state.turn,
         title: annualEvent.title,
         description: annualEvent.description,
-        type: annualEvent.type,
+        type: (annualEvent.type === 'ECONOMIC' ? 'ECONOMY' : annualEvent.type) as any,
       })
     }
   }

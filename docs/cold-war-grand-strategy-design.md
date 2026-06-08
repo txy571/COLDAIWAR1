@@ -69,11 +69,11 @@ Year N (第 N 年)
 **每轮四阶段详解**：
 
 1. **AI 事件阶段** — 推进已有局势、激活预定义历史事件（按年份触发）、时代过渡通知
-2. **🇺🇸 美国行动阶段** — 美国玩家提交 1 条指令（经济/军事/政治/外交/科技）
-3. **🇷🇺 苏联行动阶段** — 苏联玩家提交 1 条指令
-4. **结算阶段** — AI 裁判结算双方行动 → CWS 变化 → 影响力变化 → 新闻生成
+2. **🇺🇸 美国行动阶段** — 美国玩家提交 1 条指令（经济/军事/政治/外交/科技），并在结束行动时**立刻交由 AI 裁判完成规则校验与数值结算**。
+3. **🇷🇺 苏联行动阶段** — 苏联玩家提交 1 条指令，并在结束行动时**立刻交由 AI 裁判完成规则校验与数值结算**。
+4. **结算阶段** — 进行常规系统维护结算，包括重算区域 CWS 分数、更新末日时钟、结算 Buff 过期、科技点生成以及胜利条件检查。
 
-> 美苏交替行动的设计确保双方在每轮中都能对同一局势做出回应，体现冷战的"行动-反行动"博弈本质。
+> 美苏交替行动在提交后立刻由 AI 判定，确保每一项具体的决策都能迅速得到 AI 裁判的公正裁决，体现冷战的"行动-反应"动态博弈。
 
 **行动类别**（每人每轮 1 条指令，全年共 4 条）：
 - 💰 **经济行动** — 援助、制裁、基建、资源开发
@@ -95,7 +95,7 @@ interface GameState {
   currentEra: 'POST_WW2' | 'IRON_CURTAIN' | 'INFO_AGE'
   year: number
   turn: number
-  phase: 'AI_EVENT' | 'INTEL' | 'PLAYER_ACTION' | 'RESOLVE'
+  phase: 'AI_EVENT' | 'USA_ACTION' | 'USSR_ACTION' | 'RESOLVE'
   globalTension: number              // 0-100
   regionalScores: Record<string, RegionalScore>
   countries: Record<string, Country>
