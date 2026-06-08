@@ -11,7 +11,7 @@ export function ApiSettings() {
 
   const [open, setOpen] = useState(false)
   const [apiKey, setApiKey] = useState('')
-  const [provider, setProvider] = useState<'openai' | 'anthropic'>('openai')
+  const [provider, setProvider] = useState<'openai' | 'anthropic' | 'deepseek'>('openai')
   const [workerHost, setWorkerHost] = useState('localhost:8787')
   const [saved, setSaved] = useState(false)
 
@@ -40,7 +40,7 @@ export function ApiSettings() {
     const savedProvider = localStorage.getItem('ai_judge_provider')
     const savedHost = localStorage.getItem('multiplayer_worker_host')
     if (savedKey) setApiKey(savedKey)
-    if (savedProvider === 'openai' || savedProvider === 'anthropic') setProvider(savedProvider)
+    if (savedProvider === 'openai' || savedProvider === 'anthropic' || savedProvider === 'deepseek') setProvider(savedProvider)
     if (savedHost) setWorkerHost(savedHost)
   }, [])
 
@@ -69,12 +69,18 @@ export function ApiSettings() {
                 }`}
                 onClick={() => { setProvider('anthropic'); audioManager.playClick(); }}
               >Anthropic</button>
+              <button
+                className={`flex-1 py-1 text-[9px] border rounded-sm font-mono ${
+                  provider === 'deepseek' ? 'bg-stone-700 text-stone-100 border-stone-700' : 'bg-stone-100 text-stone-500 border-stone-300'
+                }`}
+                onClick={() => { setProvider('deepseek'); audioManager.playClick(); }}
+              >DeepSeek</button>
             </div>
             <input
               type="password"
               value={apiKey}
               onChange={e => setApiKey(e.target.value)}
-              placeholder={`输入 ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key...`}
+              placeholder={`输入 ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'DeepSeek'} API Key...`}
               className="w-full bg-stone-100 border border-stone-400 rounded-sm p-1.5 text-[10px] font-mono outline-none focus:border-stone-600 placeholder:text-stone-300"
             />
           </div>

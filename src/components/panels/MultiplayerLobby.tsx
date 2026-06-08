@@ -6,7 +6,7 @@
  *       匹配成功后自动进入游戏。没有开放入口。
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { MultiplayerManager, MultiplayerEvent } from '@/lib/multiplayer'
 import { audioManager } from '@/lib/audio'
 import { useGameStore } from '@/store/gameStore'
@@ -25,7 +25,29 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   const [log, setLog] = useState<string[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [useMock, setUseMock] = useState(false)
-  const [preferredSide, setPreferredSide] = useState<'usa' | 'ussr'>('usa') // NEW
+  const [preferredSide, setPreferredSide] = useState<'usa' | 'ussr'>('usa')
+  // API settings state
+  const [showApiSettings, setShowApiSettings] = useState(false)
+  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'deepseek'>('openai')
+  const [apiKey, setApiKey] = useState('')
+  const [apiSaved, setApiSaved] = useState(false)
+
+  // Load saved API settings on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const savedKey = localStorage.getItem('ai_judge_api_key')
+    const savedProvider = localStorage.getItem('ai_judge_provider') as 'openai' | 'anthropic' | 'deepseek' | null
+    if (savedKey) setApiKey(savedKey)
+    if (savedProvider) setApiProvider(savedProvider)
+  }, [])
+
+  const saveApiSettings = () => {
+    audioManager.playClick()
+    localStorage.setItem('ai_judge_api_key', apiKey.trim())
+    localStorage.setItem('ai_judge_provider', apiProvider)
+    setApiSaved(true)
+    setTimeout(() => setApiSaved(false), 2000)
+  }
   const managerRef = useRef<MultiplayerManager | null>(null)
 
   // Refs to avoid stale closures in WebSocket callbacks
@@ -202,6 +224,50 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
                     本地 Mock
                   </button>
                 </div>
+              </div>
+
+              {/* AI API Settings */}
+              <div className="border border-stone-300 rounded-sm overflow-hidden">
+                <button
+                  onClick={() => { setShowApiSettings(!showApiSettings); audioManager.playClick(); }}
+                  className="w-full flex items-center justify-between p-2.5 text-[9px] font-mono font-bold text-stone-500 hover:text-stone-700 bg-stone-100/50 transition-colors"
+                >
+                  <span>🤖 AI 裁判设置</span>
+                  <span>{showApiSettings ? '▲' : '▼'}</span>
+                </button>
+                {showApiSettings && (
+                  <div className="p-3 border-t border-stone-300/50 space-y-2.5 bg-stone-50/30">
+                    <div className="flex gap-1.5">
+                      {(['openai', 'anthropic', 'deepseek'] as const).map(p => (
+                        <button
+                          key={p}
+                          onClick={() => { setApiProvider(p); audioManager.playClick(); }}
+                          className={`flex-1 py-1.5 text-[9px] border rounded-sm font-mono font-bold transition-colors ${
+                            apiProvider === p ? 'bg-stone-700 text-stone-50 border-stone-700' : 'bg-stone-50 text-stone-500 border-stone-300 hover:bg-stone-100'
+                          }`}
+                        >
+                          {p === 'openai' ? 'OpenAI' : p === 'anthropic' ? 'Anthropic' : 'DeepSeek'}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder={`输入 ${apiProvider === 'openai' ? 'OpenAI' : apiProvider === 'anthropic' ? 'Anthropic' : 'DeepSeek'} API Key...`}
+                      className="w-full bg-stone-50 border border-stone-400 rounded-sm p-1.5 text-[9px] font-mono outline-none focus:border-stone-600 placeholder:text-stone-300"
+                    />
+                    <button
+                      onClick={saveApiSettings}
+                      className="w-full py-1.5 bg-stone-700 hover:bg-stone-800 text-stone-50 text-[9px] font-bold rounded-sm transition-colors"
+                    >
+                      {apiSaved ? '✓ 已保存' : '保存 API 设置'}
+                    </button>
+                    <p className="text-[7px] text-stone-400 leading-tight">
+                      未配置时将自动回退本地规则引擎。DeepSeek 使用兼容 OpenAI 的 API 格式。
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Side Selector */}

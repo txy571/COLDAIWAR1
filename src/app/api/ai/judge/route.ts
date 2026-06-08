@@ -260,14 +260,17 @@ ${compressedTimelineStr}
       const data = await response.json()
       content = data.content?.[0]?.text || ''
     } else {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const isDeepSeek = provider === 'deepseek'
+      const apiUrl = isDeepSeek ? 'https://api.deepseek.com/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions'
+      const model = isDeepSeek ? 'deepseek-chat' : 'gpt-4o-mini'
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `玩家行动：\n阵营：${side}\n类别：${action?.category}\n描述：${action?.description}\n\n请严格按照要求给出游戏结算JSON。` },
