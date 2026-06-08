@@ -47,22 +47,22 @@ function getFillColor(
 function getAlignmentColor(alignment: Alignment, era: Era): string {
   if (era === 'IRON_CURTAIN') {
     switch (alignment) {
-      case 'USA_ALLY': return '#003322'
-      case 'USSR_ALLY': return '#330011'
-      default: return '#001a0a'
+      case 'USA_ALLY': return '#003344' // Phosphor dark teal-blue
+      case 'USSR_ALLY': return '#442200' // Phosphor dark amber-orange
+      default: return '#05180c' // Phosphor dark green
     }
   }
   if (era === 'INFO_AGE') {
     switch (alignment) {
-      case 'USA_ALLY': return '#001a33'
-      case 'USSR_ALLY': return '#1a0033'
-      default: return '#0a001a'
+      case 'USA_ALLY': return '#002233' // Cyber deep blue
+      case 'USSR_ALLY': return '#33001a' // Cyber deep magenta
+      default: return '#0a001a' // Cyber deep space
     }
   }
   switch (alignment) {
-    case 'USA_ALLY': return '#3b82f6'
-    case 'USSR_ALLY': return '#dc2626'
-    default: return '#a3a3a3'
+    case 'USA_ALLY': return '#2c5282' // Vintage navy
+    case 'USSR_ALLY': return '#9b2c2c' // Vintage wine crimson
+    default: return '#a0aec0' // Vintage sand gray
   }
 }
 
@@ -104,15 +104,21 @@ function getStrokeColor(
   if (isSelected) return '#ffffff'
   if (isContested) return '#ffaa00'
   if (isTransferred) return '#ffff44'
-  if (era === 'IRON_CURTAIN') return '#00ff88'
-  if (era === 'INFO_AGE') {
+  if (era === 'IRON_CURTAIN') {
     switch (alignment) {
-      case 'USA_ALLY': return '#00ffff'
-      case 'USSR_ALLY': return '#ff00ff'
-      default: return '#00ff88'
+      case 'USA_ALLY': return '#00e5ff' // Glowing phosphor teal
+      case 'USSR_ALLY': return '#ff9100' // Glowing phosphor amber
+      default: return '#00ff88' // Glowing phosphor green
     }
   }
-  return '#5a4a3a'
+  if (era === 'INFO_AGE') {
+    switch (alignment) {
+      case 'USA_ALLY': return '#00ffff' // Neon cyan
+      case 'USSR_ALLY': return '#ff00ff' // Neon magenta
+      default: return '#a600ff' // Neon violet
+    }
+  }
+  return '#4e3f30' // Vintage dark ink
 }
 
 export const CountryShape = React.memo(function CountryShape({

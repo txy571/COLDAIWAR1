@@ -214,15 +214,18 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-200 p-2 sm:p-4 font-serif text-stone-800 flex items-center justify-center">
-      <div className="w-full max-w-7xl h-[95vh] border-4 border-stone-700 shadow-2xl rounded-sm flex flex-col overflow-hidden paper-texture"
+    <div className="min-h-screen bg-[var(--bg-app)] p-2 sm:p-4 text-[var(--text-primary)] transition-colors duration-500 flex items-center justify-center theme-font">
+      <div className={`w-full max-w-7xl h-[95vh] border-4 border-[var(--border-dark)] shadow-2xl rounded-sm flex flex-col overflow-hidden relative ${store.currentEra === 'INFO_AGE' ? 'cyber-glass' : 'paper-texture bg-[var(--bg-canvas)]'}`}
         data-era={store.currentEra.toLowerCase()}>
 
+        {/* CRT Vignette screen curvature effect */}
+        {store.currentEra === 'IRON_CURTAIN' && <div className="crt-vignette" />}
+
         {/* ═══ 顶栏 ═══ */}
-        <header className="metal-dashboard text-stone-200 px-4 sm:px-6 py-2 flex justify-between items-center border-b-4 border-stone-700 z-10 shrink-0">
+        <header className={`px-4 sm:px-6 py-2 flex justify-between items-center border-b-4 border-[var(--border-dark)] z-10 shrink-0 ${store.currentEra === 'POST_WW2' ? 'metal-dashboard text-stone-200' : 'bg-[var(--bg-header)] text-[var(--text-primary)]'}`}>
           <div className="flex items-center gap-4">
-            <h1 className="font-serif text-xl sm:text-2xl tracking-widest font-bold text-stone-100 flex items-center gap-2">
-              {i18n.t('title')} <span className="text-stone-400 font-normal text-base">· {year}</span>
+            <h1 className="text-xl sm:text-2xl tracking-widest font-bold flex items-center gap-2">
+              {i18n.t('title')} <span className="text-[var(--text-muted)] font-normal text-base">· {year}</span>
             </h1>
             {/* Quick config options */}
             <div className="flex gap-2">
@@ -268,13 +271,13 @@ export default function Home() {
               <span className="text-amber-400 font-bold">{ussr.victoryScore}分</span>
             </div>
 
-            <div className="flex items-center gap-2 bg-stone-900/60 px-3 py-1.5 rounded-sm border border-stone-600 text-[11px] sm:text-xs">
-              <span className="text-stone-400">第{turn}轮</span>
-              <span className={`font-bold ${globalTension > 60 ? 'text-red-400' : 'text-stone-400'}`}>
+            <div className="flex items-center gap-2 bg-[var(--bg-panel)]/40 px-3 py-1.5 rounded-sm border border-[var(--border-main)]/50 text-[11px] sm:text-xs">
+              <span className="text-[var(--text-muted)]">第{turn}轮</span>
+              <span className={`font-bold ${globalTension > 60 ? 'text-red-500' : 'text-[var(--text-primary)]'}`}>
                 ☢ {globalTension}
               </span>
               <span className={`text-[9px] ${
-                phase === 'USA_ACTION' ? 'text-blue-400' : phase === 'USSR_ACTION' ? 'text-red-400' : 'text-stone-500'
+                phase === 'USA_ACTION' ? 'text-blue-500' : phase === 'USSR_ACTION' ? 'text-red-500' : 'text-[var(--text-muted)]'
               }`}>{phaseLabel}</span>
             </div>
 
@@ -300,13 +303,13 @@ export default function Home() {
         <div className="flex flex-1 overflow-hidden">
 
           {/* ─── 左侧面板 ─── */}
-          <aside className="w-72 sm:w-80 bg-[#e8e4d9] border-r-2 border-stone-400 flex flex-col z-10 shrink-0 overflow-y-auto">
+          <aside className="w-72 sm:w-80 bg-[var(--bg-sidebar)] border-r-2 border-[var(--border-main)] flex flex-col z-10 shrink-0 overflow-y-auto">
 
             {/* 战略热点 */}
-            <div className="p-4 sm:p-5 border-b-2 border-stone-400/60">
-              <h2 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em] mb-3 flex justify-between items-center">
+            <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
+              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 flex justify-between items-center">
                 <span>🌡 战略热点</span>
-                <span className="font-mono text-stone-400">冷战分</span>
+                <span className="font-mono text-[var(--text-muted)]">冷战分</span>
               </h2>
               <div className="space-y-2">
                 {cwsRanking.map((c, i) => (
@@ -314,12 +317,12 @@ export default function Home() {
                     key={c.id}
                     onClick={() => setSelectedCountryId(c.id)}
                     className={`flex items-center gap-2 p-1 -mx-1 rounded-sm transition-colors cursor-pointer text-xs ${
-                      selectedCountryId === c.id ? 'bg-stone-400/30 ring-1 ring-stone-400/50' : 'hover:bg-stone-300/50'
+                      selectedCountryId === c.id ? 'bg-[var(--border-main)]/30 ring-1 ring-[var(--border-main)]/50' : 'hover:bg-[var(--border-main)]/10'
                     }`}
                   >
-                    <span className="text-stone-400 w-4 text-right font-mono">{i + 1}</span>
+                    <span className="text-[var(--text-muted)] w-4 text-right font-mono">{i + 1}</span>
                     <span className={`flex-1 font-medium ${
-                      selectedCountryId === c.id ? 'text-stone-900' : 'text-stone-700 group-hover:text-stone-900'
+                      selectedCountryId === c.id ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     }`}>{c.name}</span>
                     <div className="threat-meter w-16">
                       <div
@@ -338,18 +341,18 @@ export default function Home() {
             <DoomsdayClock />
 
             {/* 当前局势 */}
-            <div className="p-4 sm:p-5 border-b-2 border-stone-400/60">
-              <h2 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em] mb-3">🚩 当前局势</h2>
+            <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
+              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3">🚩 当前局势</h2>
               {activeSituations.length === 0 ? (
-                <p className="text-xs text-stone-400 italic">暂无活跃局势</p>
+                <p className="text-xs text-[var(--text-muted)] italic">暂无活跃局势</p>
               ) : (
                 <div className="space-y-2">
                   {activeSituations.map((sit: Situation) => {
                     const stage = sit.stages[sit.currentStage]
                     return (
-                      <div key={sit.id} className="wood-frame bg-stone-700/5 p-2.5 text-xs rounded-sm">
-                        <div className="font-bold text-stone-800 text-xs mb-1">{sit.name}</div>
-                        <div className="flex justify-between text-[10px] text-stone-500">
+                      <div key={sit.id} className="wood-frame bg-[var(--bg-panel)]/40 p-2.5 text-xs rounded-sm">
+                        <div className="font-bold text-[var(--text-primary)] text-xs mb-1">{sit.name}</div>
+                        <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
                           <span>{stage?.name}</span>
                           <span className="font-mono">({sit.stageProgress}/{stage?.durationTurns})</span>
                         </div>
@@ -365,16 +368,16 @@ export default function Home() {
             </div>
 
             {/* 区域局势 */}
-            <div className="p-4 sm:p-5 border-b-2 border-stone-400/60">
-              <h2 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em] mb-3">📊 区域局势</h2>
+            <div className="p-4 sm:p-5 border-b-2 border-[var(--border-main)]/40">
+              <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3">📊 区域局势</h2>
               <div className="space-y-3">
                 {Object.entries(store.regionalScores).slice(0, 8).map(([key, r]) => (
                   <div key={key}>
-                    <div className="flex justify-between text-[10px] text-stone-600 mb-1">
+                    <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
                       <span className="capitalize">{key.replace(/_/g, ' ')}</span>
                       <span className="font-mono">{r.cws}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-stone-300 rounded-full overflow-hidden flex">
+                    <div className="h-1.5 w-full bg-[var(--border-main)]/35 rounded-full overflow-hidden flex">
                       <div className="bg-blue-500/70 h-full transition-all" style={{ width: `${Math.min(100, r.cws)}%` }} />
                       <div className="bg-red-500/70 h-full transition-all" style={{ width: `${Math.max(0, Math.min(100 - r.cws, r.cws * 0.4))}%` }} />
                     </div>
@@ -400,37 +403,37 @@ export default function Home() {
           </aside>
 
           {/* ─── 中央：地图 ─── */}
-          <main className="flex-1 relative bg-[#c8c1ae] overflow-hidden flex flex-col">
+          <main className="flex-1 relative bg-[var(--bg-canvas)] overflow-hidden flex flex-col">
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')]" />
             <div className="flex-1 relative">
               <WorldMap />
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#f0ede6]/90 border-2 border-stone-400 px-4 py-1.5 shadow-md rounded-sm text-[10px] text-stone-500 whitespace-nowrap">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[var(--bg-panel)]/90 border-2 border-[var(--border-main)] px-4 py-1.5 shadow-md rounded-sm text-[10px] text-[var(--text-primary)] whitespace-nowrap">
                 🗺 滚轮缩放 · 拖拽平移 · 双击放大
               </div>
-              <div className="absolute top-4 right-4 bg-[#f0ede6] border-2 border-stone-400 p-3 shadow-lg rounded-sm max-w-[180px] hidden sm:block">
-                <h3 className="font-bold text-stone-700 text-[10px] mb-0.5 tracking-wide">📋 情报</h3>
-                <p className="text-[9px] text-stone-500 leading-tight">点击国家查看详情与影响力数据。</p>
+              <div className="absolute top-4 right-4 bg-[var(--bg-panel)]/90 border-2 border-[var(--border-main)] p-3 shadow-lg rounded-sm max-w-[180px] hidden sm:block">
+                <h3 className="font-bold text-[var(--text-primary)] text-[10px] mb-0.5 tracking-wide">📋 情报</h3>
+                <p className="text-[9px] text-[var(--text-muted)] leading-tight">点击国家查看详情与影响力数据。</p>
               </div>
             </div>
           </main>
 
           {/* ─── 右侧面板 ─── */}
-          <aside className="w-72 bg-[#e8e4d9] border-l-2 border-stone-400 flex flex-col overflow-y-auto shrink-0">
-            <div className="border-b-2 border-stone-400/60">
-              <div className="p-3 bg-stone-700/5 border-b border-stone-300/50">
-                <h2 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em]">📋 情报分析</h2>
+          <aside className="w-72 bg-[var(--bg-sidebar)] border-l-2 border-[var(--border-main)] flex flex-col overflow-y-auto shrink-0">
+            <div className="border-b-2 border-[var(--border-main)]/40">
+              <div className="p-3 bg-[var(--bg-panel)]/10 border-b border-[var(--border-main)]/30">
+                <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">📋 情报分析</h2>
               </div>
               <CountryInfo />
             </div>
-            <div className="border-b-2 border-stone-400/60">
-              <div className="p-3 bg-stone-700/5 border-b border-stone-300/50">
-                <h2 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em]">🎯 指挥中心</h2>
+            <div className="border-b-2 border-[var(--border-main)]/40">
+              <div className="p-3 bg-[var(--bg-panel)]/10 border-b border-[var(--border-main)]/30">
+                <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">🎯 指挥中心</h2>
               </div>
               <ActionInput />
             </div>
             <div className="flex-1">
-              <div className="p-3 bg-stone-700/5 border-b border-stone-300/50">
-                <h2 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em]">🔬 科技研发</h2>
+              <div className="p-3 bg-[var(--bg-panel)]/10 border-b border-[var(--border-main)]/30">
+                <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">🔬 科技研发</h2>
               </div>
               <TechTreePanel />
             </div>
@@ -448,7 +451,7 @@ export default function Home() {
         </div>
 
         {/* ═══ 底部新闻条 ═══ */}
-        <div className="border-t-2 border-stone-400 bg-[#dfd9cb] shrink-0">
+        <div className="border-t-2 border-[var(--border-main)] bg-[var(--bg-panel)] text-[var(--text-primary)] shrink-0">
           <NewsTicker />
         </div>
       </div>

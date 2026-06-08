@@ -88,18 +88,18 @@ function ActionForm({ side }: { side: Side }) {
     return (
       <div className="p-3 text-xs space-y-2">
         <div className={`text-center py-2 rounded-sm border font-bold text-[10px] tracking-wider ${
-          side === 'usa' ? 'bg-blue-900/20 border-blue-800/30 text-blue-700' : 'bg-red-900/20 border-red-800/30 text-red-700'
+          side === 'usa' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'bg-red-500/10 border-red-500/30 text-red-500'
         }`}>
           {side === 'usa' ? '🇺🇸 美国' : '🇷🇺 苏联'}
         </div>
-        <div className="text-center text-stone-500 text-[10px] italic py-3">
+        <div className="text-center text-[var(--text-muted)] text-[10px] italic py-3">
           ✅ 指令已提交，等待 AI 裁判判定
         </div>
         {useGameStore.getState().players[side].recentActions
           .filter(a => a.turn === turn && a.status === 'PENDING')
           .slice(0, 1)
           .map(a => (
-            <div key={a.id} className="p-2 bg-stone-200/50 border border-stone-300 rounded-sm text-[10px] text-stone-600">
+            <div key={a.id} className="p-2 bg-[var(--bg-panel)]/60 border border-[var(--border-main)] rounded-sm text-[10px] text-[var(--text-primary)]">
               <span className="font-bold">
                 {CATEGORIES.find(c => c.id === a.category)?.icon}
                 {CATEGORIES.find(c => c.id === a.category)?.label}
@@ -116,7 +116,7 @@ function ActionForm({ side }: { side: Side }) {
     <div className="p-3 text-xs space-y-2">
       {/* Side indicator */}
       <div className={`text-center py-1.5 rounded-sm border font-bold text-[10px] tracking-wider ${
-        side === 'usa' ? 'bg-blue-900/20 border-blue-800/30 text-blue-700' : 'bg-red-900/20 border-red-800/30 text-red-700'
+        side === 'usa' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'bg-red-500/10 border-red-500/30 text-red-500'
       }`}>
         {side === 'usa' ? '🇺🇸 美国回合 — 请下达指令' : '🇷🇺 苏联回合 — 请下达指令'}
       </div>
@@ -127,8 +127,8 @@ function ActionForm({ side }: { side: Side }) {
           <button key={c.id}
             className={`flex-1 py-1.5 text-xs rounded-sm border transition-all ${
               category === c.id
-                ? 'bg-stone-700 text-stone-100 border-stone-700 shadow-sm'
-                : 'bg-stone-100 text-stone-600 border-stone-300 hover:bg-stone-200'
+                ? 'bg-[var(--border-dark)] text-[var(--text-light)] border-[var(--border-dark)] shadow-sm'
+                : 'bg-[var(--bg-panel)]/40 text-[var(--text-primary)] border-[var(--border-main)] hover:bg-[var(--bg-panel)]/80'
             }`}
             onClick={() => setCategory(c.id)}
           >{c.icon}<span className="ml-0.5 text-[9px]">{c.label}</span></button>
@@ -140,13 +140,13 @@ function ActionForm({ side }: { side: Side }) {
         value={description}
         onChange={e => setDescription(e.target.value)}
         placeholder={`输入${CATEGORIES.find(c => c.id === category)?.label}指令...（200字以内）\n例如："向西德提供经济援助"`}
-        className="w-full h-20 text-[10px] bg-stone-100 border border-stone-400 rounded-sm p-2 resize-none outline-none focus:border-stone-600 placeholder:text-stone-300 font-mono"
+        className="w-full h-20 text-[10px] bg-[var(--bg-panel)]/40 border border-[var(--border-main)] rounded-sm p-2 resize-none outline-none focus:border-[var(--border-dark)] placeholder:text-[var(--text-muted)]/50 font-mono text-[var(--text-primary)]"
         maxLength={MAX_CHARS}
       />
 
       {/* 字数 + 提交 */}
       <div className="flex items-center justify-between">
-        <span className={`text-[9px] font-mono ${charsLeft < 20 ? 'text-red-500' : 'text-stone-400'}`}>
+        <span className={`text-[9px] font-mono ${charsLeft < 20 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>
           {charsLeft} / {MAX_CHARS}
         </span>
         <button
@@ -157,7 +157,7 @@ function ActionForm({ side }: { side: Side }) {
           ▶ 提交给 AI 裁判
         </button>
       </div>
-      <p className="text-[8px] text-stone-400 leading-tight">每回合每方只能提交一条指令。AI裁判将根据内容判定效果。</p>
+      <p className="text-[8px] text-[var(--text-muted)] leading-tight">每回合每方只能提交一条指令。AI裁判将根据内容判定效果。</p>
     </div>
   )
 }

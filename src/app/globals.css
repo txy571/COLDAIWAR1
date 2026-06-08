@@ -11,27 +11,110 @@
 
 /* ═══ PGU Theme: Cold War Grand Strategy ═══ */
 :root {
+  --bg-app: #dcd7ca;
   --bg-canvas: #f0ede6;
   --bg-sidebar: #e8e4d9;
   --bg-panel: #dfd9cb;
-  --bg-header: #292524;
-  --text-primary: #292524;
-  --text-muted: #78716c;
-  --text-light: #d6d3d1;
-  --border-main: #a8a29e;
-  --border-dark: #44403c;
-  --accent-usa: #3b82f6;
-  --accent-ussr: #ef4444;
-  --wood-light: #d4b896;
-  --wood-dark: #8b7355;
-  --brass: #b8860b;
-  --parchment: #f5f0e8;
+  --bg-header: #2d2a26;
+  --text-primary: #2c2724;
+  --text-muted: #6b645f;
+  --text-light: #e8e4d9;
+  --border-main: #bdae9c;
+  --border-dark: #4e443c;
+  --accent-usa: #2c5282;
+  --accent-ussr: #9b2c2c;
+  --font-family: 'Playfair Display', Georgia, serif;
+  --glow-glow: none;
+  --shadow-panel: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-@font-face {
-  font-family: 'Playfair Display';
-  src: local('Georgia'), local('Times New Roman');
+[data-era="post_ww2"] {
+  --bg-app: #dcd7ca;
+  --bg-canvas: #f0ede6;
+  --bg-sidebar: #e8e4d9;
+  --bg-panel: #dfd9cb;
+  --bg-header: #2d2a26;
+  --text-primary: #2c2724;
+  --text-muted: #6b645f;
+  --text-light: #e8e4d9;
+  --border-main: #bdae9c;
+  --border-dark: #4e443c;
+  --accent-usa: #2c5282;
+  --accent-ussr: #9b2c2c;
+  --font-family: 'Playfair Display', Georgia, serif;
+  --glow-glow: none;
+  --shadow-panel: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
+
+[data-era="iron_curtain"] {
+  --bg-app: #010502;
+  --bg-canvas: #000a00;
+  --bg-sidebar: #020f04;
+  --bg-panel: #031405;
+  --bg-header: #010702;
+  --text-primary: #33ff77;
+  --text-muted: #1cb547;
+  --text-light: #80ffa2;
+  --border-main: #115c21;
+  --border-dark: #33ff77;
+  --accent-usa: #00e5ff;
+  --accent-ussr: #ff9100;
+  --font-family: 'Share Tech Mono', 'Courier New', monospace;
+  --glow-glow: 0 0 5px rgba(51, 255, 119, 0.5);
+  --shadow-panel: 0 0 15px rgba(0, 255, 136, 0.15);
+}
+
+[data-era="info_age"] {
+  --bg-app: #030006;
+  --bg-canvas: #0a0015;
+  --bg-sidebar: rgba(10, 0, 21, 0.75);
+  --bg-panel: rgba(22, 0, 44, 0.45);
+  --bg-header: #05000c;
+  --text-primary: #00ffff;
+  --text-muted: #a600ff;
+  --text-light: #ffffff;
+  --border-main: rgba(0, 255, 255, 0.2);
+  --border-dark: #ff00ff;
+  --accent-usa: #00f0ff;
+  --accent-ussr: #ff007f;
+  --font-family: 'Inter', system-ui, sans-serif;
+  --glow-glow: 0 0 8px rgba(0, 255, 255, 0.6);
+  --shadow-panel: 0 4px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* Base style mapping to variables */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  transition: background-color 0.5s, color 0.3s;
+}
+
+/* Custom visual utilities */
+.theme-text-glow {
+  text-shadow: var(--glow-glow);
+}
+
+.theme-font {
+  font-family: var(--font-family);
+}
+
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, transparent 50%, rgba(0, 10, 0, 0.85) 150%);
+  pointer-events: none;
+  z-index: 40;
+}
+
+.cyber-glass {
+  background: var(--bg-panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-panel);
+}
+
 
 /* Aged paper texture overlay */
 .paper-texture {
