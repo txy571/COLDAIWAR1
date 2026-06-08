@@ -4,6 +4,8 @@
  *       Includes a fully functional offline local mock mode as fallback.
  */
 
+import { getMultiplayerHost, getWsProtocol } from '@/config/multiplayer'
+
 export type MultiplayerEvent =
   | { type: 'INIT'; side: 'usa' | 'ussr' | 'observer'; gameState: any; timer: number }
   | { type: 'PLAYER_JOINED'; side: string; message: string }
@@ -42,18 +44,8 @@ export class MultiplayerManager {
   }
 
   private connect() {
-    let wsHost = 'localhost:8787'
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname
-      const savedHost = localStorage.getItem('multiplayer_worker_host')
-      if (savedHost) {
-        wsHost = savedHost
-      } else if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-        // Guess domain by replacing pages host or prefixing
-        wsHost = `multiplayer.${hostname}`
-      }
-    }
-    const protocol = wsHost.includes('localhost') ? 'ws' : 'wss'
+    const wsHost = getMultiplayerHost()
+    const protocol = getWsProtocol(wsHost)
     const wsUrl = `${protocol}://${wsHost}/ws?room=${encodeURIComponent(this.roomId)}&side=${this.side}`
     try {
       this.socket = new WebSocket(wsUrl)

@@ -34,6 +34,7 @@ import { audioManager } from '@/lib/audio'
 import { i18n } from '@/lib/i18n'
 import type { Situation } from '@/types/situation'
 import type { VictoryResult } from '@/engine/victory'
+import { BASE_PATH } from '@/config/multiplayer'
 import type { Newspaper } from '@/types'
 import { generateLocalNewspaper } from '@/engine/newspaperGenerator'
 import { NewspaperModal } from '@/components/panels/NewspaperModal'
@@ -83,7 +84,7 @@ export default function Home() {
     
     if (apiKey) {
       try {
-        const response = await fetch('/api/ai/newspaper', {
+        const response = await fetch(`${BASE_PATH}/api/ai/newspaper`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

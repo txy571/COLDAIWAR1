@@ -6,6 +6,7 @@
 import type { GameStore } from '@/store/gameStore'
 import type { Country, PlayerAction, ActionCategory, Side, Alignment, Buff } from '@/types'
 import { emit } from '@/lib/eventBus'
+import { BASE_PATH } from '@/config/multiplayer'
 
 const CATEGORY_KEYWORDS: Record<ActionCategory, string[]> = {
   ECONOMIC: ['援助', '投资', '制裁', '贷款', '贸易', '经济', '预算', '基建', '资源', '资金', '货币', '关税', '重建', '开发', '经济合作'],
@@ -367,7 +368,7 @@ export async function resolvePendingActions(state: GameStore, side: Side): Promi
 
     if (apiKey) {
       try {
-        const response = await fetch('/api/ai/judge', {
+        const response = await fetch(`${BASE_PATH}/api/ai/judge`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

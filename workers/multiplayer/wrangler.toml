@@ -1,0 +1,13 @@
+name = "coldwar-multiplayer"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+# Durable Objects binding
+[[durable_objects.bindings]]
+name = "GAME_ROOM"
+class_name = "GameRoom"
+
+# Durable Object migration (new class, SQLite storage for free plan)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameRoom"]
