@@ -46,11 +46,18 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   }
 
   const startGame = (side: 'usa' | 'ussr') => {
-    setTimeout(() => {
-      if (managerRef.current) {
-        onGameStartRef.current(roomIdRef.current, side, managerRef.current)
-      }
-    }, 1000)
+    if (managerRef.current) {
+      onGameStartRef.current(roomIdRef.current, side, managerRef.current)
+    }
+  }
+
+  // Manual override: visible when waiting with opponent connected
+  const [canManualEnter, setCanManualEnter] = useState(false)
+
+  // After PLAYER_JOINED or full activePlayers, enable manual enter too
+  const triggerGameStart = (side: 'usa' | 'ussr') => {
+    setCanManualEnter(false)
+    startGame(side)
   }
 
   // NOT wrapped in useCallback — needs fresh values from refs
@@ -75,12 +82,14 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
       case 'PLAYER_JOINED':
         addLog(ev.message)
         addLog('[系统] ⚡ 对手已就位，进入游戏！')
+        setCanManualEnter(true)
         const mySideAfterJoin: 'usa' | 'ussr' = ev.side === 'usa' ? 'ussr' : 'usa'
         startGame(mySideAfterJoin)
         break
       case 'PLAYERS_CHANGED':
         if (ev.activePlayers && ev.activePlayers.length >= 2) {
-          addLog(`[系统] 检测到双方已就位，进入游戏！`)
+          addLog(`[系统] 检测到双方已就位！`)
+          setCanManualEnter(true)
           startGame(mySideRef.current || 'usa')
         }
         break
@@ -294,6 +303,15 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
                     <div key={i} className="text-stone-600 leading-tight">{msg}</div>
                   ))}
                 </div>
+              )}
+
+              {canManualEnter && (
+                <button
+                  onClick={() => startGame(mySideRef.current || 'usa')}
+                  className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold tracking-wider rounded-sm transition-all animate-pulse text-sm"
+                >
+                  ⚡ 进入游戏（手动）
+                </button>
               )}
 
               <button onClick={cleanup} className="text-[9px] text-red-600 hover:text-red-800 underline">
