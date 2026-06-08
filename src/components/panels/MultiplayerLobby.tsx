@@ -6,7 +6,7 @@
  *       匹配成功后自动进入游戏。没有开放入口。
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { MultiplayerManager, MultiplayerEvent } from '@/lib/multiplayer'
 import { audioManager } from '@/lib/audio'
 import { useGameStore } from '@/store/gameStore'
@@ -27,6 +27,12 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
   const [useMock, setUseMock] = useState(false)
   const managerRef = useRef<MultiplayerManager | null>(null)
 
+  // Refs to avoid stale closures in WebSocket callbacks
+  const roomIdRef = useRef(roomId)
+  roomIdRef.current = roomId
+  const onGameStartRef = useRef(onGameStart)
+  onGameStartRef.current = onGameStart
+
   const addLog = (msg: string) => setLog(prev => [...prev, msg])
 
   const generateRoomId = () => {
@@ -36,7 +42,16 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
     return result
   }
 
-  const handleLobbyEvent = useCallback((ev: MultiplayerEvent) => {
+  const startGame = (side: 'usa' | 'ussr') => {
+    setTimeout(() => {
+      if (managerRef.current) {
+        onGameStartRef.current(roomIdRef.current, side, managerRef.current)
+      }
+    }, 1000)
+  }
+
+  // NOT wrapped in useCallback — needs fresh values from refs
+  const handleLobbyEvent = (ev: MultiplayerEvent) => {
     switch (ev.type) {
       case 'INIT':
         if (ev.side === 'usa' || ev.side === 'ussr') setMySide(ev.side)
@@ -49,12 +64,7 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
         if (ev.activePlayers && ev.activePlayers.length >= 2) {
           addLog(`[系统] 已连接至房间，对手已就位！`)
           addLog('[系统] ⚡ 进入游戏！')
-          const opponentSide = ev.side === 'usa' ? 'ussr' : 'usa'
-          setTimeout(() => {
-            if (managerRef.current) {
-              onGameStart(roomId, ev.side as 'usa' | 'ussr', managerRef.current)
-            }
-          }, 1000)
+          startGame(ev.side as 'usa' | 'ussr')
         } else {
           addLog(`[系统] 已连接至服务器，房间: ${ev.side === 'usa' ? '等待苏方加入...' : '等待美方加入...'}`)
         }
@@ -62,7 +72,8 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
       case 'PLAYER_JOINED':
         addLog(ev.message)
         addLog('[系统] ⚡ 对手已就位，进入游戏！')
-        handleStartGame(ev.side)
+        const mySideAfterJoin: 'usa' | 'ussr' = ev.side === 'usa' ? 'ussr' : 'usa'
+        startGame(mySideAfterJoin)
         break
       case 'CONNECTION_ERROR':
         setErrorMsg(ev.message)
@@ -73,19 +84,6 @@ export function MultiplayerLobby({ onGameStart }: MultiplayerLobbyProps) {
         break
       default:
         break
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const handleStartGame = (joinedSide: string) => {
-    // Determine my side based on who joined
-    const myActualSide = joinedSide === 'usa' ? 'ussr' : 'usa'
-    if (managerRef.current && myActualSide) {
-      setTimeout(() => {
-        if (managerRef.current) {
-          onGameStart(roomId, myActualSide, managerRef.current)
-        }
-      }, 1500)
     }
   }
 
