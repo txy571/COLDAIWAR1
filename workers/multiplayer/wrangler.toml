@@ -1,6 +1,12 @@
 name = "coldwar-multiplayer"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
+workers_dev = true
+
+# Custom domain route
+routes = [
+  { pattern = "coldwar-multiplayer.183107.xyz/*", zone_id = "6a337c1f263ad6b69f56acb8429dc36a" },
+]
 
 # Durable Objects binding
 [[durable_objects.bindings]]

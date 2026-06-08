@@ -9,7 +9,7 @@ export const BASE_PATH = '/COLDAIWAR1'
 
 // In production (GitHub Pages), connect to Cloudflare Worker
 // In development (localhost), connect to local wrangler dev server
-const PROD_WS_HOST = 'coldwar-multiplayer.1065972581.workers.dev'
+const PROD_WS_HOST = 'coldwar-multiplayer.183107.xyz'
 const DEV_WS_HOST = 'localhost:8787'
 
 export function getMultiplayerHost(): string {
